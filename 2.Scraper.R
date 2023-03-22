@@ -59,7 +59,7 @@ getCIK = function(symbol){
   subset(INFO, INFO$ticker == paste(symbol))$CIK
 }
 
-#Get Data
+#Create function that retrieves data
 DataAccess = function(ticker, year){
   CIK = getCIK(ticker)
   url <- paste0("https://data.sec.gov/api/xbrl/companyfacts/CIK",CIK,".json")
