@@ -81,8 +81,7 @@ DataAccess = function(ticker, year){
       tmp$symbol <- ticker
       # return df
       filter(tmp, form=="10-K",fy==year, substr(end,1,4)==year)
-    }),use.names=TRUE, fill=TRUE)}
-    else{
+    }),use.names=TRUE, fill=TRUE)}else{
       DEI = NULL
   }
   N = length(data_raw$facts$`us-gaap`)
