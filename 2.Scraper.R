@@ -59,11 +59,19 @@ getCIK = function(symbol){
   subset(INFO, INFO$ticker == paste(symbol))$CIK
 }
 
+CIK = getCIK("A")
+url <- paste0("https://data.sec.gov/api/xbrl/companyfacts/CIK",CIK,".json")
+
+pg <- GET(url = url,
+          config = httr::add_headers(`User-Agent` = "Sunny Bhatia 590913ab@student.eur.nl",
+                                     `Accept-Encoding` = 'gzip, deflate'))
+data_raw <- try(content(pg, as="text", encoding="UTF-8") %>% fromJSON(pg, flatten=TRUE),silent = TRUE)
 
 #Get Data
 DataAccess = function(ticker, year){
   CIK = getCIK(ticker)
-  pg <- GET(url = paste0("https://data.sec.gov/api/xbrl/companyfacts/CIK",CIK,".json"),
+  url <- paste0("https://data.sec.gov/api/xbrl/companyfacts/CIK",CIK,".json")
+  pg <- GET(url = url,
             config = httr::add_headers(`User-Agent` = "Sunny Bhatia 590913ab@student.eur.nl",
                                        `Accept-Encoding` = 'gzip, deflate'))
   data_raw <- try(content(pg, as="text", encoding="UTF-8") %>% fromJSON(pg, flatten=TRUE),silent = TRUE)
@@ -154,12 +162,12 @@ result_df <- data.frame()
 Error_count <- 0
 
 
-
 for (i in seq_along(tickers)) {
   tryCatch({
     temp_df <- DataAccess(tickers[i], years[i])
     result_df <- rbind(result_df, temp_df)
     pb$tick()
+    Sys.sleep(1)
   }, error = function(e) {
     message(sprintf("Skipping %s %d due to error: %s", tickers[i], years[i], e$message))
     Error_count <<- Error_count +1 
