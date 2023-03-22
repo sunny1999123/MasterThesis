@@ -59,14 +59,6 @@ getCIK = function(symbol){
   subset(INFO, INFO$ticker == paste(symbol))$CIK
 }
 
-CIK = getCIK("A")
-url <- paste0("https://data.sec.gov/api/xbrl/companyfacts/CIK",CIK,".json")
-
-pg <- GET(url = url,
-          config = httr::add_headers(`User-Agent` = "Sunny Bhatia 590913ab@student.eur.nl",
-                                     `Accept-Encoding` = 'gzip, deflate'))
-data_raw <- try(content(pg, as="text", encoding="UTF-8") %>% fromJSON(pg, flatten=TRUE),silent = TRUE)
-
 #Get Data
 DataAccess = function(ticker, year){
   CIK = getCIK(ticker)
