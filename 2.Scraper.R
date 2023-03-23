@@ -167,22 +167,5 @@ for (i in seq_along(tickers)) {
 
 
 
-depreciation_rows <- grepl("depreciation", result_df$desc, ignore.case = TRUE)
-
-results_depreciation <- result_df[depreciation_rows, ]
-
-
-result_df <-write.csv(result_df, "result_df.csv")
-
-
-
-ticker_symbols <- unique(as.character(result_df$symbol))
-ticker_symbols[139]
-ticker_symbols2 <- unique(tickers)
-ticker_symbols3 <- ticker_symbols2[1:148]
-
-Difference_4 <-setdiff(ticker_symbols3,ticker_symbols)
-Difference_2
-
 cat(sprintf("Number of errors: %d", Error_count))
 
