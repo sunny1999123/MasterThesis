@@ -1,8 +1,5 @@
 #PART 1
 
-#Set Working Directory
-#setwd("C:/Users/sunny/Desktop/Thesis/Data Analysis")
-
 #Load Libraries
 library(readxl)
 library(dplyr)
