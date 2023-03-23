@@ -19,9 +19,9 @@ Ticker_symbols_last <- Ticker_Symbols %>%
   group_by(year) %>%
   summarise_all(last)
 
-#Change from wide to long format and remove date 
+#Change from wide to long format and remove date. Only select interested years
 Ticker_symbols_last <- subset(Ticker_symbols_last, select = -c(date))
-
+Ticker_symbols_last <- Ticker_symbols_last[5:11,]
 
 
 Ticker_symbbol_Long_format <- reshape(Ticker_symbols_last,
