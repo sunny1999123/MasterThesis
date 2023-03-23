@@ -16,6 +16,8 @@ library(stringr)
 library(jsonlite)
 library(data.table)
 library(progress)
+library(foreach)
+
 
 #Import Ticker Symbols and extra CIK report, only use first three columns
 Tickers <- read.csv("Tickers.csv")
@@ -146,6 +148,34 @@ DataAccess = function(ticker, year){
   ALL
 }
 
+
+#Create subsets per year 
+tickers_list <- split(Tickers, Tickers$Year)
+
+# print data frames
+for (i in seq_along(tickers_list)) {
+  assign(paste0("DF_Tickers_", names(tickers_list[i])), tickers_list[[i]], envir = .GlobalEnv)
+}
+
+Tickers_2015 <- DF_Tickers_2015$Ticker
+Tickers_2016 <- DF_Tickers_2016$Ticker
+Tickers_2017 <- DF_Tickers_2017$Ticker
+Tickers_2018 <- DF_Tickers_2018$Ticker
+Tickers_2019 <- DF_Tickers_2019$Ticker
+Tickers_2020 <- DF_Tickers_2020$Ticker
+Tickers_2021 <- DF_Tickers_2021$Ticker
+
+
+Year_2015 <- DF_Tickers_2015$Year
+Year_2016 <- DF_Tickers_2016$Year
+Year_2017 <- DF_Tickers_2017$Year
+Year_2018 <- DF_Tickers_2018$Year
+Year_2019 <- DF_Tickers_2019$Year
+Year_2020 <- DF_Tickers_2020$Year
+Year_2021 <- DF_Tickers_2021$Year
+
+
+
 tickers <- Tickers$Ticker
 years <- Tickers$Year
 pb <- progress_bar$new(total = length(tickers) * length(years))
@@ -153,18 +183,64 @@ result_df <- data.frame()
 Error_count <- 0
 
 
-for (i in seq_along(tickers)) {
+
+
+# for (i in seq_along(tickers)) {
+#   tryCatch({
+#     temp_df <- DataAccess(tickers[i], years[i])
+#     result_df <- rbind(result_df, temp_df)
+#     pb$tick()
+#     Sys.sleep(1)
+#   }, error = function(e) {
+#     message(sprintf("Skipping %s %d due to error: %s", tickers[i], years[i], e$message))
+#     Error_count <<- Error_count +1 
+#   })
+# }
+
+
+# Define a function to process a single ticker and year
+process_ticker <- function(ticker, year) {
   tryCatch({
-    temp_df <- DataAccess(tickers[i], years[i])
-    result_df <- rbind(result_df, temp_df)
-    pb$tick()
-    Sys.sleep(1)
+    DataAccess(ticker, year)
   }, error = function(e) {
-    message(sprintf("Skipping %s %d due to error: %s", tickers[i], years[i], e$message))
-    Error_count <<- Error_count +1 
+    message(sprintf("Skipping %s %d due to error: %s", ticker, year, e$message))
+    Error_count <<- Error_count + 1
+    NULL
   })
 }
 
+# Pass vectors of tickers and years to the function
+result_list <- foreach(i = seq_along(Tickers_2015), .combine = "rbind") %dopar% {
+  process_ticker(Tickers_2015[i], Year_2015[i])
+}
+
+result_list_2016 <- foreach(i = seq_along(Tickers_2016), .combine = "rbind") %dopar% {
+  process_ticker(Tickers_2016[i], Year_2016[i])
+}
+
+result_list_2017 <- foreach(i = seq_along(Tickers_2017), .combine = "rbind") %dopar% {
+  process_ticker(Tickers_2017[i], Tickers_2017[i])
+}
+
+result_list_2018 <- foreach(i = seq_along(Tickers_2018), .combine = "rbind") %dopar% {
+  process_ticker(Tickers_2018[i], Tickers_2018[i])
+}
+
+result_list_2019 <- foreach(i = seq_along(Tickers_2019), .combine = "rbind") %dopar% {
+  process_ticker(Tickers_2019[i], Tickers_2019[i])
+}
+
+result_list_2020 <- foreach(i = seq_along(Tickers_2020), .combine = "rbind") %dopar% {
+  process_ticker(Tickers_2020[i], Tickers_2020[i])
+}
+
+result_list_2021 <- foreach(i = seq_along(Tickers_2021), .combine = "rbind") %dopar% {
+  process_ticker(Tickers_2021[i], Tickers_2021[i])
+}
+
+
+result_df <- rbind(result_list,result_list_2016,result_list_2017,result_list_2018,result_list_2019,result_list_2020,result_list_2021 )
+write.csv(result_df, "result_df.csv")
 
 
 cat(sprintf("Number of errors: %d", Error_count))
