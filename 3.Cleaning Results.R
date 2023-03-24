@@ -4,7 +4,7 @@ library(dplyr)
 library(XBRL)
 
 
-#Read results 
+#Read results of financial info
 Results <- read.csv("result_df.csv")
 
 #Clean results 
