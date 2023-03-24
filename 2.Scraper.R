@@ -219,23 +219,23 @@ result_list_2016 <- foreach(i = seq_along(Tickers_2016), .combine = "rbind") %do
 }
 
 result_list_2017 <- foreach(i = seq_along(Tickers_2017), .combine = "rbind") %dopar% {
-  process_ticker(Tickers_2017[i], Tickers_2017[i])
+  process_ticker(Tickers_2017[i], Year_2017[i])
 }
 
 result_list_2018 <- foreach(i = seq_along(Tickers_2018), .combine = "rbind") %dopar% {
-  process_ticker(Tickers_2018[i], Tickers_2018[i])
+  process_ticker(Tickers_2018[i], Year_2018[i])
 }
 
 result_list_2019 <- foreach(i = seq_along(Tickers_2019), .combine = "rbind") %dopar% {
-  process_ticker(Tickers_2019[i], Tickers_2019[i])
+  process_ticker(Tickers_2019[i], Year_2019[i])
 }
 
 result_list_2020 <- foreach(i = seq_along(Tickers_2020), .combine = "rbind") %dopar% {
-  process_ticker(Tickers_2020[i], Tickers_2020[i])
+  process_ticker(Tickers_2020[i], Year_2020[i])
 }
 
 result_list_2021 <- foreach(i = seq_along(Tickers_2021), .combine = "rbind") %dopar% {
-  process_ticker(Tickers_2021[i], Tickers_2021[i])
+  process_ticker(Tickers_2021[i], Year_2021[i])
 }
 
 
