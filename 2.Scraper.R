@@ -240,7 +240,7 @@ result_list_2021 <- foreach(i = seq_along(Tickers_2021), .combine = "rbind") %do
 
 
 result_df <- rbind(result_list,result_list_2016,result_list_2017,result_list_2018,result_list_2019,result_list_2020,result_list_2021 )
-write.csv(result_df, "result_df.csv")
+write.csv(result_df, "result_df.csv", row.names = FALSE)
 
 
 cat(sprintf("Number of errors: %d", Error_count))
