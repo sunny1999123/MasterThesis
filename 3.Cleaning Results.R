@@ -2,10 +2,13 @@
 #Load libraries
 library(dplyr)
 library(XBRL)
-
+library(tidyr)
 
 #Read results of financial info
 Results <- read.csv("result_df.csv")
+Frames <- unique(Results$frame)
+FramesUsed <- c(NA, "CY2016", "CY2017", "CY2018", "CY2019", "CY2020", "CY2021")
+Results <-Results[Results$frame %in% FramesUsed,]
 DF_results <- subset(Results, select = c("val", "fy","desc", "symbol"))
 
 
@@ -18,6 +21,9 @@ DF_results$FY_symbol <- paste(DF_results$fy, DF_results$symbol, sep=" ")
 NumberFirms <- unique(DF_results$FY_symbol)
 length(NumberFirms) #answer is 2602
 #So each item used should occur 2602 times 
+
+
+
 
 #-----------------------------------------------------------------
 #Revenue
@@ -33,8 +39,18 @@ desc_counts_rev <- Revenue %>%
 head(desc_counts_rev,10) #first two names seem to indicate revenue
 
 #Modify 
-DF_results$desc <- if_else(DF_results$desc =="RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues",DF_results$desc)
-any(grepl("RevenueFromContractWithCustomerExcludingAssessedTax", DF_results$desc, ignore.case = TRUE)) #Check
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "RevenueFromContractWithCustomerExcludingAssessedTax" & 
+        !any(desc == "Revenues"), 
+      "Revenues", 
+      desc
+    )
+  ) %>%
+  ungroup()
+
 
 #name= "Revenues"
 
@@ -48,11 +64,34 @@ desc_counts_receiv <- Receivable %>%
   group_by(desc) %>%
   summarise(count = n())%>%
   arrange(desc(count))
-head(desc_counts_receiv,10) #first two names seem to indicate revenue
+head(desc_counts_receiv,30) #first two names seem to indicate revenue
 
-DF_results$desc <- if_else(DF_results$desc =="ReceivablesNetCurrent", "AccountsReceivableNetCurrent",DF_results$desc)
-DF_results$desc <- if_else(DF_results$desc =="AccountsReceivableNetCurrent", "AccountsReceivable",DF_results$desc)
-any(grepl("ReceivablesNetCurrent", DF_results$desc, ignore.case = TRUE)) #Check
+
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "ReceivablesNetCurrent"  &
+        !any(desc == "AccountsReceivable"),
+      "AccountsReceivable",
+      desc
+    )
+  ) %>%
+  ungroup()
+
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "AccountsReceivableNetCurrent"  &
+        !any(desc == "AccountsReceivable"),
+      "AccountsReceivable",
+      desc
+    )
+  ) %>%
+  ungroup()
+
+
 
 #Name = AccountsReceivable
 
@@ -68,8 +107,19 @@ desc_counts_currentasset <- CurrentAssets %>%
   arrange(desc(count))
 head(desc_counts_currentasset,10) #first two names seem to indicate revenue
 
-DF_results$desc <- if_else(DF_results$desc =="AssetsCurrent", "CurrentAssets",DF_results$desc)
-any(grepl("AssetsCurrent", DF_results$desc, ignore.case = TRUE)) #Check
+
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "AssetsCurrent" &
+        !any(desc == "CurrentAssets"),
+      "CurrentAssets",
+      desc
+    )
+  ) %>%
+  ungroup()
+
 
 #Name = CurrentAssets
 
@@ -85,8 +135,18 @@ desc_counts_currentliabilities <- liabilities %>%
   arrange(desc(count))
 head(desc_counts_currentliabilities,10) #first two names seem to indicate revenue
 
-DF_results$desc <- if_else(DF_results$desc =="LiabilitiesCurrent", "CurrentLiabilities",DF_results$desc)
-any(grepl("LiabilitiesCurrent", DF_results$desc, ignore.case = TRUE)) #Check
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "LiabilitiesCurrent" & 
+        !any(desc == "CurrentLiabilities"), 
+      "CurrentLiabilities", 
+      desc
+    )
+  ) %>%
+  ungroup()
+
 
 #Name = CurrentLiabilities
 
@@ -102,8 +162,20 @@ desc_counts_inventory <- inventory %>%
   arrange(desc(count))
 head(desc_counts_inventory,10) #first two names seem to indicate revenue
 
-DF_results$desc <- if_else(DF_results$desc =="InventoryNet", "Inventory",DF_results$desc)
-any(grepl("InventoryNet", DF_results$desc, ignore.case = TRUE)) #Check
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "InventoryNet" & 
+        !any(desc == "Inventory"), 
+      "Inventory", 
+      desc
+    )
+  ) %>%
+  ungroup()
+
+
+
 
 #Name = Inventory
 
@@ -120,8 +192,18 @@ desc_counts_debt <- Debt %>%
   arrange(desc(count))
 head(desc_counts_debt,20) #first two names seem to indicate revenue
 
-DF_results$desc <- if_else(DF_results$desc =="LongTermDebt", "Debt",DF_results$desc)
-any(grepl("LongTermDebt", DF_results$desc, ignore.case = TRUE)) #Check
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "LongTermDebt" & 
+        !any(desc == "Debt"), 
+      "Debt", 
+      desc
+    )
+  ) %>%
+  ungroup()
+
 
 #Name = Debt
 
@@ -138,11 +220,22 @@ desc_counts_equity <- equity %>%
   arrange(desc(count))
 head(desc_counts_equity,20) #first two names seem to indicate revenue
 
-DF_results$desc <- if_else(DF_results$desc =="StockholdersEquity", "Equity",DF_results$desc)
-any(grepl("StockholdersEquity", DF_results$desc, ignore.case = TRUE)) #Check
+
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "StockholdersEquity" & 
+        !any(desc == "Equity"), 
+      "Equity", 
+      desc
+    )
+  ) %>%
+  ungroup()
+
+
 
 #Name = Equity
-
 
 #-----------------------------------------------------------------
 #NET INCOME
@@ -154,7 +247,20 @@ desc_counts_NetIncome <- income %>%
   group_by(desc) %>%
   summarise(count = n())%>%
   arrange(desc(count))
-head(desc_counts_NetIncome,20) #first two names seem to indicate revenue
+head(desc_counts_NetIncome,20) 
+
+# DF_results <- DF_results %>%
+#   group_by(FY_symbol) %>%
+#   mutate(
+#     desc = ifelse(
+#       desc == "NetIncomeLoss" & 
+#         !any(desc == "NetIncomeLoss"), 
+#       "NetIncomeLoss", 
+#       desc
+#     )
+#   ) %>%
+#   ungroup()
+
 
 #Name = NetIncomeLoss
 
@@ -171,6 +277,20 @@ desc_counts_Assets <- Assets %>%
   arrange(desc(count))
 head(desc_counts_Assets,20) #first two names seem to indicate revenue
 
+# DF_results <- DF_results %>%
+#   group_by(FY_symbol) %>%
+#   mutate(
+#     desc = ifelse(
+#       desc == "Assets" & 
+#         !any(desc == "Assets"), 
+#       "Assets", 
+#       desc
+#     )
+#   ) %>%
+#   ungroup()
+
+
+
 #Name = Assets
 
 #-----------------------------------------------------------------
@@ -185,8 +305,20 @@ desc_counts_CostGoodsSold <- Cost %>%
   arrange(desc(count))
 head(desc_counts_CostGoodsSold,10) #first two names seem to indicate revenue
 
-DF_results$desc <- if_else(DF_results$desc =="CostOfGoodsAndServicesSold", "CostGoodsSold",DF_results$desc)
-any(grepl("CostOfGoodsAndServicesSold", DF_results$desc, ignore.case = TRUE)) #Check
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "CostOfGoodsAndServicesSold" &
+        !any(desc == "CostGoodsSold"),
+      "CostGoodsSold",
+      desc
+    )
+  ) %>%
+  ungroup()
+
+
+
 
 #Name = CostGoodsSold
 
@@ -202,9 +334,32 @@ desc_counts_Depreciation <- Depreciation %>%
   arrange(desc(count))
 head(desc_counts_Depreciation,10) #first two names seem to indicate revenue
 
-DF_results$desc <- if_else(DF_results$desc =="DepreciationDepletionAndAmortization", "DepreciationAmortization",DF_results$desc)
-DF_results$desc <- if_else(DF_results$desc =="DepreciationAndAmortization", "Depreciation",DF_results$desc)
-any(grepl("DepreciationAndAmortization", DF_results$desc, ignore.case = TRUE)) #Check
+#Modify 
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "DepreciationDepletionAndAmortization" &
+        !any(desc == "DepreciationAmortization"),
+      "DepreciationAmortization",
+      desc
+    )
+  ) %>%
+  ungroup()
+
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "DepreciationAndAmortization" &
+        !any(desc == "DepreciationAmortization"),
+      "DepreciationAmortization",
+      desc
+    )
+  ) %>%
+  ungroup()
+
+
 
 #Name = DepreciationAmortization
 
@@ -220,8 +375,20 @@ desc_counts_Plant <- plant %>%
   arrange(desc(count))
 head(desc_counts_Plant,10) #first two names seem to indicate revenue
 
-DF_results$desc <- if_else(DF_results$desc =="PropertyPlantAndEquipmentNet", "PropertyPlantAndEquipment",DF_results$desc)
-any(grepl("PropertyPlantAndEquipmentNet", DF_results$desc, ignore.case = TRUE)) #Check
+
+
+
+# DF_results <- DF_results %>%
+#   group_by(FY_symbol) %>%
+#   mutate(
+#     desc = ifelse(
+#       desc == "PropertyPlantAndEquipmentNet" &
+#         !any(desc == "PropertyPlantAndEquipment"),
+#       "PropertyPlantAndEquipment",
+#       desc
+#     )
+#   ) %>%
+#   ungroup()
 
 #Name = PropertyPlantAndEquipment
 
@@ -238,10 +405,20 @@ desc_counts_LongDebt <- Long_term_debt %>%
 head(desc_counts_LongDebt,10) #first two names seem to indicate revenue
 
 
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "LongTermDebtNoncurrent" &
+        !any(desc == "LongTermDebt"),
+      "LongTermDebt",
+      desc
+    )
+  ) %>%
+  ungroup()
 
 
-DF_results$desc <- if_else(DF_results$desc =="LongTermDebtNoncurrent", "LongTermDebt",DF_results$desc)
-any(grepl("LongTermDebt", DF_results$desc, ignore.case = TRUE)) #Check
+
 
 #Name = LongTermDebt
 
@@ -258,11 +435,18 @@ desc_counts_FixedAssets <- FixedAssets %>%
   arrange(desc(count))
 head(desc_counts_FixedAssets,20) #first two names seem to indicate revenue
 
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "OtherAssetsNoncurrent" &
+        !any(desc == "FixedAssets"),
+      "FixedAssets",
+      desc
+    )
+  ) %>%
+  ungroup()
 
-
-
-DF_results$desc <- if_else(DF_results$desc =="OtherAssetsNoncurrent", "FixedAssets",DF_results$desc)
-any(grepl("OtherAssetsNoncurrent", DF_results$desc, ignore.case = TRUE)) #Check
 
 
 #Name = FixedAssets
@@ -278,6 +462,18 @@ desc_counts_OperatingIncome <- OperatingIncome %>%
   summarise(count = n())%>%
   arrange(desc(count))
 head(desc_counts_OperatingIncome,20) #first two names seem to indicate revenue
+
+# DF_results <- DF_results %>%
+#   group_by(FY_symbol) %>%
+#   mutate(
+#     desc = ifelse(
+#       desc == "OperatingIncomeLoss" &
+#         !any(desc == "OperatingIncomeLoss"),
+#       "OperatingIncomeLoss",
+#       desc
+#     )
+#   ) %>%
+#   ungroup()
 
 #Name = OperatingIncomeLoss
 #EBITDA still needs to be calculated: Operating income +depreciation & amortization
@@ -295,11 +491,18 @@ desc_counts_Interest <- Interest %>%
   arrange(desc(count))
 head(desc_counts_Interest,20) #first two names seem to indicate revenue
 
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "InterestExpense" &
+        !any(desc == "Interest"),
+      "Interest",
+      desc
+    )
+  ) %>%
+  ungroup()
 
-
-
-DF_results$desc <- if_else(DF_results$desc =="InterestExpense", "Interest",DF_results$desc)
-any(grepl("InterestExpense", DF_results$desc, ignore.case = TRUE)) #Check
 
 #Name = Interest
 
@@ -316,11 +519,18 @@ desc_counts_PreTaxIncome <- income %>%
   arrange(desc(count))
 head(desc_counts_PreTaxIncome,20) #first two names seem to indicate revenue
 
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest" &
+        !any(desc == "PreTaxIncome"),
+      "PreTaxIncome",
+      desc
+    )
+  ) %>%
+  ungroup()
 
-
-
-DF_results$desc <- if_else(DF_results$desc =="IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest", "PreTaxIncome",DF_results$desc)
-any(grepl("IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest", DF_results$desc, ignore.case = TRUE)) #Check
 
 #Name = PreTaxIncome
 
@@ -334,11 +544,19 @@ desc_counts_Cash <- Cash %>%
   group_by(desc) %>%
   summarise(count = n())%>%
   arrange(desc(count))
-head(desc_counts_Cash,20) #first two names seem to indicate revenue
+head(desc_counts_Cash,40) #first two names seem to indicate revenue
 
-
-DF_results$desc <- if_else(DF_results$desc =="CashAndCashEquivalentsAtCarryingValue", "Cash",DF_results$desc)
-any(grepl("CashAndCashEquivalentsAtCarryingValue", DF_results$desc, ignore.case = TRUE)) #Check
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "CashAndCashEquivalentsAtCarryingValue" &
+        !any(desc == "Cash"),
+      "Cash",
+      desc
+    )
+  ) %>%
+  ungroup()
 
 
 #Name = cash
@@ -355,9 +573,19 @@ desc_counts_Dividend <- Dividend %>%
   arrange(desc(count))
 head(desc_counts_Dividend,20) #first two names seem to indicate revenue
 
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "PaymentsOfDividendsCommonStock" &
+        !any(desc == "Dividend"),
+      "Dividend",
+      desc
+    )
+  ) %>%
+  ungroup()
 
-DF_results$desc <- if_else(DF_results$desc =="PaymentsOfDividendsCommonStock", "Dividend",DF_results$desc)
-any(grepl("PaymentsOfDividendsCommonStock", DF_results$desc, ignore.case = TRUE)) #Check
+
 
 
 #Name = Dividend
@@ -374,9 +602,18 @@ desc_counts_CashFlowOperations <- Cash_flow %>%
   arrange(desc(count))
 head(desc_counts_CashFlowOperations,20) #first two names seem to indicate revenue
 
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations" &
+        !any(desc == "CashFlowOperations"),
+      "CashFlowOperations",
+      desc
+    )
+  ) %>%
+  ungroup()
 
-DF_results$desc <- if_else(DF_results$desc =="NetCashProvidedByUsedInOperatingActivitiesContinuingOperations", "CashFlowOperations",DF_results$desc)
-any(grepl("CashAndCashEquivalentsAtCarryingValue", DF_results$desc, ignore.case = TRUE)) #Check
 
 
 #Name = CashFlowOperations
@@ -393,16 +630,25 @@ desc_counts_ResearchDevelopment <- Research %>%
   arrange(desc(count))
 head(desc_counts_ResearchDevelopment,20) #first two names seem to indicate revenue
 
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "ResearchAndDevelopmentExpense" &
+        !any(desc == "ResearchDevelopment"),
+      "ResearchDevelopment",
+      desc
+    )
+  ) %>%
+  ungroup()
 
-DF_results$desc <- if_else(DF_results$desc =="ResearchAndDevelopmentExpense", "ResearchDevelopment",DF_results$desc)
-any(grepl("ResearchAndDevelopmentExpense", DF_results$desc, ignore.case = TRUE)) #Check
 
 
 #Name = ResearchDevelopment
 
-#-------------
-#End of variable investigation
 
+#----------------
+#End of variable investigation
 
 
 
@@ -412,9 +658,35 @@ InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","Curre
                          "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
 
 
+Clean_results_df <- DF_results[DF_results$desc %in% InterestedVariables,]
 
-Apple_2021 <- filter(DF_results, FY_symbol=="2021 AAPL")
+#Reorder Table
+Clean_results_df <- select(Clean_results_df, symbol, fy, FY_symbol, desc, val)
 
+#Long to wide format
+CleanResultsWide <- pivot_wider(Clean_results_df, names_from = desc, values_from = val, values_fill = NA, id_cols = c("symbol", "fy", "FY_symbol"))
+
+#Check duplicates
+dUplicates <- Clean_results_df %>%
+dplyr::group_by(symbol, fy, FY_symbol, desc) %>%
+  dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+  dplyr::filter(n > 1L)
+
+
+
+COO_2021 <- filter(Results, fy=="2021"&symbol=="COO")
+COO_2021_1 <- filter(DF_results, fy=="2021"&symbol=="COO")
+
+ECL_2021 <- filter(Results, fy=="2021"&symbol=="ECL")
+ECL_2021_1 <- filter(DF_results, fy=="2021"&symbol=="ECL")
+
+
+
+
+length(unique(dUplicates$FY_symbol))
+
+
+Frames <- unique(Results$frame)
 
 
 
