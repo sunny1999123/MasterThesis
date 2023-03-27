@@ -299,39 +299,122 @@ head(desc_counts_Interest,20) #first two names seem to indicate revenue
 
 
 DF_results$desc <- if_else(DF_results$desc =="InterestExpense", "Interest",DF_results$desc)
-any(grepl("OtherAssetsNoncurrent", DF_results$desc, ignore.case = TRUE)) #Check
+any(grepl("InterestExpense", DF_results$desc, ignore.case = TRUE)) #Check
+
+#Name = Interest
 
 
 #-----------------------------------------------------------------
-#Interest
+#pre-tax income
 
-Interest <- grepl("Interest", DF_results$desc, ignore.case = TRUE)
-Interest <- DF_results[Interest,]
+PreTaxIncome <- grepl("income", DF_results$desc, ignore.case = TRUE)
+PreTaxIncome <- DF_results[PreTaxIncome,]
 
-desc_counts_Interest <- Interest %>%
+desc_counts_PreTaxIncome <- income %>%
   group_by(desc) %>%
   summarise(count = n())%>%
   arrange(desc(count))
-head(desc_counts_Interest,20) #first two names seem to indicate revenue
+head(desc_counts_PreTaxIncome,20) #first two names seem to indicate revenue
 
 
 
 
-DF_results$desc <- if_else(DF_results$desc =="InterestExpense", "Interest",DF_results$desc)
-any(grepl("OtherAssetsNoncurrent", DF_results$desc, ignore.case = TRUE)) #Check
+DF_results$desc <- if_else(DF_results$desc =="IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest", "PreTaxIncome",DF_results$desc)
+any(grepl("IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest", DF_results$desc, ignore.case = TRUE)) #Check
+
+#Name = PreTaxIncome
+
+#-----------------------------------------------------------------
+#cash
+
+Cash <- grepl("cash", DF_results$desc, ignore.case = TRUE)
+Cash <- DF_results[Cash,]
+
+desc_counts_Cash <- Cash %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_Cash,20) #first two names seem to indicate revenue
 
 
+DF_results$desc <- if_else(DF_results$desc =="CashAndCashEquivalentsAtCarryingValue", "Cash",DF_results$desc)
+any(grepl("CashAndCashEquivalentsAtCarryingValue", DF_results$desc, ignore.case = TRUE)) #Check
 
 
+#Name = cash
+
+#-----------------------------------------------------------------
+#dividend
+
+Dividend <- grepl("dividend", DF_results$desc, ignore.case = TRUE)
+Dividend <- DF_results[Dividend,]
+
+desc_counts_Dividend <- Dividend %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_Dividend,20) #first two names seem to indicate revenue
+
+
+DF_results$desc <- if_else(DF_results$desc =="PaymentsOfDividendsCommonStock", "Dividend",DF_results$desc)
+any(grepl("PaymentsOfDividendsCommonStock", DF_results$desc, ignore.case = TRUE)) #Check
+
+
+#Name = Dividend
+
+#-----------------------------------------------------------------
+#cash flow Operations
+
+Cash_flow <- grepl("cash", DF_results$desc, ignore.case = TRUE)
+Cash_flow <- DF_results[Cash_flow,]
+
+desc_counts_CashFlowOperations <- Cash_flow %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_CashFlowOperations,20) #first two names seem to indicate revenue
+
+
+DF_results$desc <- if_else(DF_results$desc =="NetCashProvidedByUsedInOperatingActivitiesContinuingOperations", "CashFlowOperations",DF_results$desc)
+any(grepl("CashAndCashEquivalentsAtCarryingValue", DF_results$desc, ignore.case = TRUE)) #Check
+
+
+#Name = CashFlowOperations
+
+#-----------------------------------------------------------------
+#Research & Development
+
+Research <- grepl("Research", DF_results$desc, ignore.case = TRUE)
+Research <- DF_results[Research,]
+
+desc_counts_ResearchDevelopment <- Research %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_ResearchDevelopment,20) #first two names seem to indicate revenue
+
+
+DF_results$desc <- if_else(DF_results$desc =="ResearchAndDevelopmentExpense", "ResearchDevelopment",DF_results$desc)
+any(grepl("ResearchAndDevelopmentExpense", DF_results$desc, ignore.case = TRUE)) #Check
+
+
+#Name = ResearchDevelopment
+
+#-------------
+#End of variable investigation
 
 
 
 
 InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities","Inventory",
                          "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
-                         "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest",)
+                         "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
+                         "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
 
 
 
 Apple_2021 <- filter(DF_results, FY_symbol=="2021 AAPL")
+
+
+
 
