@@ -9,7 +9,14 @@ Results <- read.csv("result_df.csv")
 Frames <- unique(Results$frame)
 FramesUsed <- c(NA, "CY2016", "CY2017", "CY2018", "CY2019", "CY2020", "CY2021")
 Results <-Results[Results$frame %in% FramesUsed,]
+Results$start <- as.Date(Results$start)
+Results$end <- as.Date(Results$end)
+
+
+
 DF_results <- subset(Results, select = c("val", "fy","desc", "symbol"))
+
+str(Results)
 
 
 #Clean results 
@@ -21,8 +28,6 @@ DF_results$FY_symbol <- paste(DF_results$fy, DF_results$symbol, sep=" ")
 NumberFirms <- unique(DF_results$FY_symbol)
 length(NumberFirms) #answer is 2602
 #So each item used should occur 2602 times 
-
-
 
 
 #-----------------------------------------------------------------
@@ -667,10 +672,11 @@ Clean_results_df <- select(Clean_results_df, symbol, fy, FY_symbol, desc, val)
 CleanResultsWide <- pivot_wider(Clean_results_df, names_from = desc, values_from = val, values_fill = NA, id_cols = c("symbol", "fy", "FY_symbol"))
 
 #Check duplicates
-dUplicates <- Clean_results_df %>%
+duplicates <- Clean_results_df %>%
 dplyr::group_by(symbol, fy, FY_symbol, desc) %>%
   dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
   dplyr::filter(n > 1L)
+
 
 
 
