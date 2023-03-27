@@ -20,7 +20,7 @@ length(NumberFirms) #answer is 2602
 #So each item used should occur 2602 times 
 
 #-----------------------------------------------------------------
-#                                                           Revenue
+#Revenue
 
 Revenue <- grepl("revenue", DF_results$desc, ignore.case = TRUE)
 Revenue <- DF_results[Revenue,]
@@ -159,4 +159,179 @@ head(desc_counts_NetIncome,20) #first two names seem to indicate revenue
 #Name = NetIncomeLoss
 
 
+#-----------------------------------------------------------------
+#Assets
+
+Assets <- grepl("Assets", DF_results$desc, ignore.case = TRUE)
+Assets <- DF_results[Assets,]
+
+desc_counts_Assets <- Assets %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_Assets,20) #first two names seem to indicate revenue
+
+#Name = Assets
+
+#-----------------------------------------------------------------
+#Cost of goods sold
+
+Cost <- grepl("Cost", DF_results$desc, ignore.case = TRUE)
+Cost <- DF_results[Cost,]
+
+desc_counts_CostGoodsSold <- Cost %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_CostGoodsSold,10) #first two names seem to indicate revenue
+
+DF_results$desc <- if_else(DF_results$desc =="CostOfGoodsAndServicesSold", "CostGoodsSold",DF_results$desc)
+any(grepl("CostOfGoodsAndServicesSold", DF_results$desc, ignore.case = TRUE)) #Check
+
+#Name = CostGoodsSold
+
+#-----------------------------------------------------------------
+#Depreciation
+
+Depreciation <- grepl("Depreciation", DF_results$desc, ignore.case = TRUE)
+Depreciation <- DF_results[Depreciation,]
+
+desc_counts_Depreciation <- Depreciation %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_Depreciation,10) #first two names seem to indicate revenue
+
+DF_results$desc <- if_else(DF_results$desc =="DepreciationDepletionAndAmortization", "DepreciationAmortization",DF_results$desc)
+DF_results$desc <- if_else(DF_results$desc =="DepreciationAndAmortization", "Depreciation",DF_results$desc)
+any(grepl("DepreciationAndAmortization", DF_results$desc, ignore.case = TRUE)) #Check
+
+#Name = DepreciationAmortization
+
+#-----------------------------------------------------------------
+#plant
+
+plant <- grepl("plant", DF_results$desc, ignore.case = TRUE)
+plant <- DF_results[plant,]
+
+desc_counts_Plant <- plant %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_Plant,10) #first two names seem to indicate revenue
+
+DF_results$desc <- if_else(DF_results$desc =="PropertyPlantAndEquipmentNet", "PropertyPlantAndEquipment",DF_results$desc)
+any(grepl("PropertyPlantAndEquipmentNet", DF_results$desc, ignore.case = TRUE)) #Check
+
+#Name = PropertyPlantAndEquipment
+
+#-----------------------------------------------------------------
+#long-term debt
+
+Long_term_debt <- grepl("long", DF_results$desc, ignore.case = TRUE)
+Long_term_debt <- DF_results[Long_term_debt,]
+
+desc_counts_LongDebt <- Long_term_debt %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_LongDebt,10) #first two names seem to indicate revenue
+
+
+
+
+DF_results$desc <- if_else(DF_results$desc =="LongTermDebtNoncurrent", "LongTermDebt",DF_results$desc)
+any(grepl("LongTermDebt", DF_results$desc, ignore.case = TRUE)) #Check
+
+#Name = LongTermDebt
+
+
+#-----------------------------------------------------------------
+#FixedAssets
+
+FixedAssets <- grepl("current", DF_results$desc, ignore.case = TRUE)
+FixedAssets <- DF_results[FixedAssets,]
+
+desc_counts_FixedAssets <- FixedAssets %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_FixedAssets,20) #first two names seem to indicate revenue
+
+
+
+
+DF_results$desc <- if_else(DF_results$desc =="OtherAssetsNoncurrent", "FixedAssets",DF_results$desc)
+any(grepl("OtherAssetsNoncurrent", DF_results$desc, ignore.case = TRUE)) #Check
+
+
+#Name = FixedAssets
+
+#-----------------------------------------------------------------
+#EBITDA
+
+OperatingIncome <- grepl("operating", DF_results$desc, ignore.case = TRUE)
+OperatingIncome <- DF_results[OperatingIncome,]
+
+desc_counts_OperatingIncome <- OperatingIncome %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_OperatingIncome,20) #first two names seem to indicate revenue
+
+#Name = OperatingIncomeLoss
+#EBITDA still needs to be calculated: Operating income +depreciation & amortization
+
+
+#-----------------------------------------------------------------
+#Interest
+
+Interest <- grepl("Interest", DF_results$desc, ignore.case = TRUE)
+Interest <- DF_results[Interest,]
+
+desc_counts_Interest <- Interest %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_Interest,20) #first two names seem to indicate revenue
+
+
+
+
+DF_results$desc <- if_else(DF_results$desc =="InterestExpense", "Interest",DF_results$desc)
+any(grepl("OtherAssetsNoncurrent", DF_results$desc, ignore.case = TRUE)) #Check
+
+
+#-----------------------------------------------------------------
+#Interest
+
+Interest <- grepl("Interest", DF_results$desc, ignore.case = TRUE)
+Interest <- DF_results[Interest,]
+
+desc_counts_Interest <- Interest %>%
+  group_by(desc) %>%
+  summarise(count = n())%>%
+  arrange(desc(count))
+head(desc_counts_Interest,20) #first two names seem to indicate revenue
+
+
+
+
+DF_results$desc <- if_else(DF_results$desc =="InterestExpense", "Interest",DF_results$desc)
+any(grepl("OtherAssetsNoncurrent", DF_results$desc, ignore.case = TRUE)) #Check
+
+
+
+
+
+
+
+
+InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities","Inventory",
+                         "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
+                         "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest",)
+
+
+
+Apple_2021 <- filter(DF_results, FY_symbol=="2021 AAPL")
 
