@@ -13,11 +13,16 @@ Results$start <- as.Date(Results$start)
 Results$end <- as.Date(Results$end)
 
 
+df_filtered <- Results %>%
+  arrange(symbol, fy, end) %>%  # sort by symbol, fy, and end
+  group_by(symbol, fy, desc) %>%  # group by symbol and fy
+  slice_tail(n = 1) %>%  # keep only the last row within each group
+  ungroup()  # remove grouping
 
-DF_results <- subset(Results, select = c("val", "fy","desc", "symbol"))
 
-str(Results)
+DF_results <- subset(df_filtered, select = c("val", "fy","desc", "symbol"))
 
+#Only get the latest row per firm, since some financial statement information is stored twice, but the first number are quarterly numbers
 
 #Clean results 
 #First only keep the interesting columns, and then change from long to wide format
@@ -26,8 +31,8 @@ str(Results)
 #Check the sum of the number of unique firms per year , which should equal the number of firms per item
 DF_results$FY_symbol <- paste(DF_results$fy, DF_results$symbol, sep=" ")
 NumberFirms <- unique(DF_results$FY_symbol)
-length(NumberFirms) #answer is 2602
-#So each item used should occur 2602 times 
+length(NumberFirms) #answer is 2556
+#So each item used should occur 2556 times 
 
 
 #-----------------------------------------------------------------
@@ -675,7 +680,7 @@ CleanResultsWide <- pivot_wider(Clean_results_df, names_from = desc, values_from
 duplicates <- Clean_results_df %>%
 dplyr::group_by(symbol, fy, FY_symbol, desc) %>%
   dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
-  dplyr::filter(n > 1L)
+  dplyr::filter(n > 1L) #No duplicates
 
 
 
