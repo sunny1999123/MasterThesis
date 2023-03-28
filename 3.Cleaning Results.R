@@ -6,26 +6,28 @@ library(tidyr)
 
 #Read results of financial info
 Results <- read.csv("result_df.csv")
+
+#Delete quarterly data 
 Frames <- unique(Results$frame)
 FramesUsed <- c(NA, "CY2016", "CY2017", "CY2018", "CY2019", "CY2020", "CY2021")
 Results <-Results[Results$frame %in% FramesUsed,]
+
+#Modify start and end to date format
 Results$start <- as.Date(Results$start)
 Results$end <- as.Date(Results$end)
 
-
+#Keep only last row of each firm, each year, each financial statement item
 df_filtered <- Results %>%
   arrange(symbol, fy, end) %>%  # sort by symbol, fy, and end
   group_by(symbol, fy, desc) %>%  # group by symbol and fy
   slice_tail(n = 1) %>%  # keep only the last row within each group
   ungroup()  # remove grouping
 
+#Get a subset of the data and change order
+DF_results <- subset(df_filtered, select = c("symbol", "fy","desc","val" ))
 
-DF_results <- subset(df_filtered, select = c("val", "fy","desc", "symbol"))
-
-#Only get the latest row per firm, since some financial statement information is stored twice, but the first number are quarterly numbers
 
 #Clean results 
-#First only keep the interesting columns, and then change from long to wide format
 #Some variables are stored with different names, every variable needs to be evaluated. 
 
 #Check the sum of the number of unique firms per year , which should equal the number of firms per item
@@ -41,50 +43,75 @@ length(NumberFirms) #answer is 2556
 Revenue <- grepl("revenue", DF_results$desc, ignore.case = TRUE)
 Revenue <- DF_results[Revenue,]
 
-desc_counts_rev <- Revenue %>%
+Revenue1 <- grepl("revenue", DF_results$desc, ignore.case = TRUE)
+Revenue1 <- DF_results[Revenue1,]
+
+
+desc_counts_rev1 <- Revenue1 %>%
   group_by(desc) %>%
   summarise(count = n())%>%
   arrange(desc(count))
 
 head(desc_counts_rev,10) #first two names seem to indicate revenue
 
-#Modify 
-DF_results <- DF_results %>%
-  group_by(FY_symbol) %>%
-  mutate(
-    desc = ifelse(
-      desc == "RevenueFromContractWithCustomerExcludingAssessedTax" & 
-        !any(desc == "Revenues"), 
-      "Revenues", 
-      desc
-    )
-  ) %>%
-  ungroup()
+Not_Rev <- c("CostOfRevenue")
 
-#Modify 
-DF_results <- DF_results %>%
-  group_by(FY_symbol) %>%
-  mutate(
-    desc = ifelse(
-      desc == "RevenueFromContractWithCustomerIncludingAssessedTax" & 
-        !any(desc == "Revenues"), 
-      "Revenues", 
-      desc
-    )
-  ) %>%
-  ungroup()
+Rev_list <- desc_counts_rev$desc
 
 DF_results <- DF_results %>%
   group_by(FY_symbol) %>%
   mutate(
+    rev_index = match(desc, Rev_list),
+    rev_index = ifelse(is.na(rev_index), Inf, rev_index) # move non-matching to the end
+  ) %>%
+  arrange(FY_symbol, rev_index) %>%
+  mutate(
     desc = ifelse(
-      desc == "ContractWithCustomerLiabilityRevenueRecognized" & 
-        !any(desc == "Revenues"), 
-      "Revenues", 
+      desc %in% Rev_list & !any(desc == "Revenues") & row_number() == match(desc[desc %in% Rev_list][1], desc),
+      "Revenues",
       desc
     )
   ) %>%
-  ungroup()
+  ungroup() %>%
+  select(-rev_index)
+
+#Modify 
+# DF_results <- DF_results %>%
+#   group_by(FY_symbol) %>%
+#   mutate(
+#     desc = ifelse(
+#       desc == "RevenueFromContractWithCustomerExcludingAssessedTax" & 
+#         !any(desc == "Revenues"), 
+#       "Revenues", 
+#       desc
+#     )
+#   ) %>%
+#   ungroup()
+# 
+# #Modify 
+# DF_results <- DF_results %>%
+#   group_by(FY_symbol) %>%
+#   mutate(
+#     desc = ifelse(
+#       desc == "RevenueFromContractWithCustomerIncludingAssessedTax" & 
+#         !any(desc == "Revenues"), 
+#       "Revenues", 
+#       desc
+#     )
+#   ) %>%
+#   ungroup()
+# 
+# DF_results <- DF_results %>%
+#   group_by(FY_symbol) %>%
+#   mutate(
+#     desc = ifelse(
+#       desc == "ContractWithCustomerLiabilityRevenueRecognized" & 
+#         !any(desc == "Revenues"), 
+#       "Revenues", 
+#       desc
+#     )
+#   ) %>%
+#   ungroup()
 
 
 
@@ -697,8 +724,6 @@ InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","Curre
 
 Clean_results_df <- DF_results[DF_results$desc %in% InterestedVariables,]
 
-#Reorder Table
-Clean_results_df <- select(Clean_results_df, symbol, fy, FY_symbol, desc, val)
 
 #Long to wide format
 CleanResultsWide <- pivot_wider(Clean_results_df, names_from = desc, values_from = val, values_fill = NA, id_cols = c("symbol", "fy", "FY_symbol"))
