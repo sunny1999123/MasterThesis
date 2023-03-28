@@ -3,6 +3,7 @@
 library(dplyr)
 library(XBRL)
 library(tidyr)
+library(ggplot2)
 
 #Read results of financial info
 Results <- read.csv("result_df.csv")
@@ -16,7 +17,7 @@ Results <-Results[Results$frame %in% FramesUsed,]
 Results$start <- as.Date(Results$start)
 Results$end <- as.Date(Results$end)
 
-#Keep only last row of each firm, each year, each financial statement item
+#Keep only last row of each firm, each year, each financial statement item (deletions are quarterly numbers)
 df_filtered <- Results %>%
   arrange(symbol, fy, end) %>%  # sort by symbol, fy, and end
   group_by(symbol, fy, desc) %>%  # group by symbol and fy
@@ -36,28 +37,30 @@ NumberFirms <- unique(DF_results$FY_symbol)
 length(NumberFirms) #answer is 2556
 #So each item used should occur 2556 times 
 
+#VARIABLE INVESTIGATION
+
 
 #-----------------------------------------------------------------
 #Revenue
 
+#Check all items that consist the name of the variable
 Revenue <- grepl("revenue", DF_results$desc, ignore.case = TRUE)
 Revenue <- DF_results[Revenue,]
 
-Revenue1 <- grepl("revenue", DF_results$desc, ignore.case = TRUE)
-Revenue1 <- DF_results[Revenue1,]
-
-
-desc_counts_rev1 <- Revenue1 %>%
+#Create subset with count of occurence
+desc_counts_rev <- Revenue %>%
   group_by(desc) %>%
   summarise(count = n())%>%
   arrange(desc(count))
+desc_counts_rev$desc
 
-head(desc_counts_rev,10) #first two names seem to indicate revenue
+#Removal of labels that are not of interest
+Not_Rev <- c("CostOfRevenue", "InterestRevenueExpenseNet")
 
-Not_Rev <- c("CostOfRevenue")
+#Create list of interesting variables
+Rev_list <- desc_counts_rev[!(desc_counts_rev$desc %in% Not_Rev), ]$desc
 
-Rev_list <- desc_counts_rev$desc
-
+#Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
 DF_results <- DF_results %>%
   group_by(FY_symbol) %>%
   mutate(
@@ -88,32 +91,6 @@ DF_results <- DF_results %>%
 #   ) %>%
 #   ungroup()
 # 
-# #Modify 
-# DF_results <- DF_results %>%
-#   group_by(FY_symbol) %>%
-#   mutate(
-#     desc = ifelse(
-#       desc == "RevenueFromContractWithCustomerIncludingAssessedTax" & 
-#         !any(desc == "Revenues"), 
-#       "Revenues", 
-#       desc
-#     )
-#   ) %>%
-#   ungroup()
-# 
-# DF_results <- DF_results %>%
-#   group_by(FY_symbol) %>%
-#   mutate(
-#     desc = ifelse(
-#       desc == "ContractWithCustomerLiabilityRevenueRecognized" & 
-#         !any(desc == "Revenues"), 
-#       "Revenues", 
-#       desc
-#     )
-#   ) %>%
-#   ungroup()
-
-
 
 
 #name= "Revenues"
@@ -711,8 +688,13 @@ DF_results <- DF_results %>%
 #Name = ResearchDevelopment
 
 
+
+
+
 #----------------
-#End of variable investigation
+
+
+#END OF VARIABLE INVESTIGATION
 
 
 
@@ -754,4 +736,8 @@ na_counts
 #Revenues
 
 subset_df_rev <- CleanResultsWide[is.na(CleanResultsWide$Revenues), ]
+
+table(is.na(CleanResultsWide$Revenues), CleanResultsWide$fy)
+      
+
 
