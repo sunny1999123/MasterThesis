@@ -61,6 +61,33 @@ DF_results <- DF_results %>%
   ) %>%
   ungroup()
 
+#Modify 
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "RevenueFromContractWithCustomerIncludingAssessedTax" & 
+        !any(desc == "Revenues"), 
+      "Revenues", 
+      desc
+    )
+  ) %>%
+  ungroup()
+
+DF_results <- DF_results %>%
+  group_by(FY_symbol) %>%
+  mutate(
+    desc = ifelse(
+      desc == "ContractWithCustomerLiabilityRevenueRecognized" & 
+        !any(desc == "Revenues"), 
+      "Revenues", 
+      desc
+    )
+  ) %>%
+  ungroup()
+
+
+
 
 #name= "Revenues"
 
@@ -680,24 +707,26 @@ CleanResultsWide <- pivot_wider(Clean_results_df, names_from = desc, values_from
 duplicates <- Clean_results_df %>%
 dplyr::group_by(symbol, fy, FY_symbol, desc) %>%
   dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
-  dplyr::filter(n > 1L) #No duplicates
+  dplyr::filter(n > 1L) 
 
 
+length(unique(duplicates$FY_symbol))#No duplicates
+
+#Checks  
+# COO_2021 <- filter(Results, fy=="2021"&symbol=="COO")
+# COO_2021_1 <- filter(DF_results, fy=="2021"&symbol=="COO")
+# 
+# ECL_2021 <- filter(Results, fy=="2021"&symbol=="ECL")
+# ECL_2021_1 <- filter(DF_results, fy=="2021"&symbol=="ECL")
+
+df_complete_cases <- na.omit(CleanResultsWide) #Only two rows
 
 
-COO_2021 <- filter(Results, fy=="2021"&symbol=="COO")
-COO_2021_1 <- filter(DF_results, fy=="2021"&symbol=="COO")
-
-ECL_2021 <- filter(Results, fy=="2021"&symbol=="ECL")
-ECL_2021_1 <- filter(DF_results, fy=="2021"&symbol=="ECL")
+na_counts <- colSums(is.na(CleanResultsWide))
+na_counts
 
 
+#Revenues
 
-
-length(unique(dUplicates$FY_symbol))
-
-
-Frames <- unique(Results$frame)
-
-
+subset_df_rev <- CleanResultsWide[is.na(CleanResultsWide$Revenues), ]
 
