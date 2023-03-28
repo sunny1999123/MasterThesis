@@ -10,7 +10,7 @@ Results <- read.csv("result_df.csv")
 
 #Delete quarterly data 
 Frames <- unique(Results$frame)
-FramesUsed <- c(NA, "CY2016", "CY2017", "CY2018", "CY2019", "CY2020", "CY2021")
+FramesUsed <- c(NA,"CY2015", "CY2016", "CY2017", "CY2018", "CY2019", "CY2020", "CY2021")
 Results <-Results[Results$frame %in% FramesUsed,]
 
 #Modify start and end to date format
@@ -34,8 +34,8 @@ DF_results <- subset(df_filtered, select = c("symbol", "fy","desc","val" ))
 #Check the sum of the number of unique firms per year , which should equal the number of firms per item
 DF_results$FY_symbol <- paste(DF_results$fy, DF_results$symbol, sep=" ")
 NumberFirms <- unique(DF_results$FY_symbol)
-length(NumberFirms) #answer is 2556
-#So each item used should occur 2556 times 
+length(NumberFirms) #answer is 2582
+#So each item used should occur 2582 times 
 
 #VARIABLE INVESTIGATION
 
@@ -54,7 +54,7 @@ desc_counts_rev <- Revenue %>%
   arrange(desc(count))
 desc_counts_rev$desc
 
-#Removal of labels that are not of interest
+#(Removal of) labels that are (not) of interest
 Not_Rev <- c("CostOfRevenue", "InterestRevenueExpenseNet")
 
 #Create list of interesting variables
@@ -101,36 +101,40 @@ DF_results <- DF_results %>%
 Receivable <- grepl("Receivable", DF_results$desc, ignore.case = TRUE)
 Receivable <- DF_results[Receivable,]
 
+
 desc_counts_receiv <- Receivable %>%
   group_by(desc) %>%
   summarise(count = n())%>%
   arrange(desc(count))
-head(desc_counts_receiv,30) #first two names seem to indicate revenue
+head(desc_counts_receiv,10) #first two names seem to indicate revenue
+desc_counts_receiv$desc
 
+#(Removal of) labels that are (not) of interest
+Receiv <- c("AccountsReceivableNetCurrent", "ReceivablesNetCurrent", "AccountsReceivableGrossCurrent", "AccountsNotesAndLoansReceivableNetCurrent",
+            "AccountsReceivableNet","AccountsAndOtherReceivablesNetCurrent", "AccountsReceivableNetNoncurrent", "OtherReceivablesGrossCurrent",
+            "AccountsReceivableGross", "AccountsAndNotesReceivableNet", "ReceivablesFromCustomers", "AccountsReceivableSale",
+            "AccountsReceivableGrossNoncurrent")
 
+#Create list of interesting variables (Not always needed)
+Receiv_list <- desc_counts_receiv[(desc_counts_receiv$desc %in% Receiv), ]$desc
+
+#Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
 DF_results <- DF_results %>%
   group_by(FY_symbol) %>%
   mutate(
+    receiv_index = match(desc, Receiv_list),
+    receiv_index = ifelse(is.na(receiv_index), Inf, receiv_index) # move non-matching to the end
+  ) %>%
+  arrange(FY_symbol, receiv_index) %>%
+  mutate(
     desc = ifelse(
-      desc == "ReceivablesNetCurrent"  &
-        !any(desc == "AccountsReceivable"),
+      desc %in% Receiv_list & !any(desc == "AccountsReceivable") & row_number() == match(desc[desc %in% Receiv_list][1], desc),
       "AccountsReceivable",
       desc
     )
   ) %>%
-  ungroup()
-
-DF_results <- DF_results %>%
-  group_by(FY_symbol) %>%
-  mutate(
-    desc = ifelse(
-      desc == "AccountsReceivableNetCurrent"  &
-        !any(desc == "AccountsReceivable"),
-      "AccountsReceivable",
-      desc
-    )
-  ) %>%
-  ungroup()
+  ungroup() %>%
+  select(-receiv_index)
 
 
 
@@ -147,19 +151,31 @@ desc_counts_currentasset <- CurrentAssets %>%
   summarise(count = n())%>%
   arrange(desc(count))
 head(desc_counts_currentasset,10) #first two names seem to indicate revenue
+desc_counts_currentasset$desc
 
+#(Removal of) labels that are (not) of interest
+Cur_ass <- c("AssetsCurrent", "OtherAssetsCurrent")
 
+#Create list of interesting variables (Not always needed)
+Curr_ass_list <- desc_counts_currentasset[(desc_counts_currentasset$desc %in% Cur_ass), ]$desc
+
+#Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
 DF_results <- DF_results %>%
   group_by(FY_symbol) %>%
   mutate(
+    Curr_ass_index = match(desc, Curr_ass_list),
+    Curr_ass_index = ifelse(is.na(Curr_ass_index), Inf, Curr_ass_index) # move non-matching to the end
+  ) %>%
+  arrange(FY_symbol, Curr_ass_index) %>%
+  mutate(
     desc = ifelse(
-      desc == "AssetsCurrent" &
-        !any(desc == "CurrentAssets"),
+      desc %in% Curr_ass_list & !any(desc == "CurrentAssets") & row_number() == match(desc[desc %in% Curr_ass_list][1], desc),
       "CurrentAssets",
       desc
     )
   ) %>%
-  ungroup()
+  ungroup() %>%
+  select(-Curr_ass_index)
 
 
 #Name = CurrentAssets
@@ -167,7 +183,7 @@ DF_results <- DF_results %>%
 #-----------------------------------------------------------------
 #CurrentLiabilities
 
-liabilities <- grepl("liabilities", DF_results$desc, ignore.case = TRUE)
+liabilities <- grepl("Current", DF_results$desc, ignore.case = TRUE)
 liabilities <- DF_results[liabilities,]
 
 desc_counts_currentliabilities <- liabilities %>%
@@ -175,19 +191,31 @@ desc_counts_currentliabilities <- liabilities %>%
   summarise(count = n())%>%
   arrange(desc(count))
 head(desc_counts_currentliabilities,10) #first two names seem to indicate revenue
+desc_counts_currentliabilities$desc
 
+#(Removal of) labels that are (not) of interest
+Cur_lia <- c("LiabilitiesCurrent", "OtherLiabilitiesCurrent", "OtherAccruedLiabilitiesCurrent","ContractWithCustomerLiabilityCurrent")
+
+#Create list of interesting variables (Not always needed)
+Curr_lia_list <- desc_counts_currentliabilities[(desc_counts_currentliabilities$desc %in% Cur_lia), ]$desc
+
+#Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
 DF_results <- DF_results %>%
   group_by(FY_symbol) %>%
   mutate(
+    Curr_lia_index = match(desc, Curr_lia_list),
+    Curr_lia_index = ifelse(is.na(Curr_lia_index), Inf, Curr_lia_index) # move non-matching to the end
+  ) %>%
+  arrange(FY_symbol, Curr_lia_index) %>%
+  mutate(
     desc = ifelse(
-      desc == "LiabilitiesCurrent" & 
-        !any(desc == "CurrentLiabilities"), 
-      "CurrentLiabilities", 
+      desc %in% Curr_lia_list & !any(desc == "CurrentLiabilities") & row_number() == match(desc[desc %in% Curr_lia_list][1], desc),
+      "CurrentLiabilities",
       desc
     )
   ) %>%
-  ungroup()
-
+  ungroup() %>%
+  select(-Curr_lia_index)
 
 #Name = CurrentLiabilities
 
@@ -202,19 +230,33 @@ desc_counts_inventory <- inventory %>%
   summarise(count = n())%>%
   arrange(desc(count))
 head(desc_counts_inventory,10) #first two names seem to indicate revenue
+desc_counts_inventory$desc
 
+#(Removal of) labels that are (not) of interest
+Cur_inve <- c("InventoryNet", "InventoryFinishedGoodsNetOfReserves", "InventoryGross","LIFOInventoryAmount","InventoryNoncurrent"
+             , "InventorySuppliesNetOfReserves")
+
+#Create list of interesting variables (Not always needed)
+Curr_inve_list <- desc_counts_inventory[(desc_counts_inventory$desc %in% Cur_inve), ]$desc
+
+
+#Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
 DF_results <- DF_results %>%
   group_by(FY_symbol) %>%
   mutate(
+    Curr_inv_index = match(desc, Curr_inve_list),
+    Curr_inv_index = ifelse(is.na(Curr_inv_index), Inf, Curr_inv_index) # move non-matching to the end
+  ) %>%
+  arrange(FY_symbol, Curr_inv_index) %>%
+  mutate(
     desc = ifelse(
-      desc == "InventoryNet" & 
-        !any(desc == "Inventory"), 
-      "Inventory", 
+      desc %in% Curr_inve_list & !any(desc == "Inventory") & row_number() == match(desc[desc %in% Curr_inve_list][1], desc),
+      "Inventory",
       desc
     )
   ) %>%
-  ungroup()
-
+  ungroup() %>%
+  select(-Curr_inv_index)
 
 
 
@@ -232,18 +274,37 @@ desc_counts_debt <- Debt %>%
   summarise(count = n())%>%
   arrange(desc(count))
 head(desc_counts_debt,20) #first two names seem to indicate revenue
+desc_counts_debt$desc
 
+
+
+#(Removal of) labels that are (not) of interest
+Cur_debt <- c("LongTermDebtNoncurrent", "LongTermDebtCurrent", "LongTermDebt","LongTermDebtAndCapitalLeaseObligations","DebtCurrent"
+              , "LongTermDebtFairValue", "DebtInstrumentFaceAmount", "SecuredDebt","UnsecuredDebt")
+
+#Create list of interesting variables (Not always needed)
+Curr_debt_list <- desc_counts_debt[(desc_counts_debt$desc %in% Cur_inve), ]$desc
+
+
+
+
+#Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
 DF_results <- DF_results %>%
   group_by(FY_symbol) %>%
   mutate(
+    Curr_debt_index = match(desc, Curr_debt_list),
+    Curr_debt_index = ifelse(is.na(Curr_debt_index), Inf, Curr_debt_index) # move non-matching to the end
+  ) %>%
+  arrange(FY_symbol, Curr_debt_index) %>%
+  mutate(
     desc = ifelse(
-      desc == "LongTermDebt" & 
-        !any(desc == "Debt"), 
-      "Debt", 
+      desc %in% Curr_debt_list & !any(desc == "Debt") & row_number() == match(desc[desc %in% Curr_debt_list][1], desc),
+      "Debt",
       desc
     )
   ) %>%
-  ungroup()
+  ungroup() %>%
+  select(-Curr_debt_index)
 
 
 #Name = Debt
@@ -715,16 +776,9 @@ duplicates <- Clean_results_df %>%
 dplyr::group_by(symbol, fy, FY_symbol, desc) %>%
   dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
   dplyr::filter(n > 1L) 
-
-
 length(unique(duplicates$FY_symbol))#No duplicates
 
-#Checks  
-# COO_2021 <- filter(Results, fy=="2021"&symbol=="COO")
-# COO_2021_1 <- filter(DF_results, fy=="2021"&symbol=="COO")
-# 
-# ECL_2021 <- filter(Results, fy=="2021"&symbol=="ECL")
-# ECL_2021_1 <- filter(DF_results, fy=="2021"&symbol=="ECL")
+
 
 df_complete_cases <- na.omit(CleanResultsWide) #Only two rows
 
@@ -737,7 +791,17 @@ na_counts
 
 subset_df_rev <- CleanResultsWide[is.na(CleanResultsWide$Revenues), ]
 
+
+
 table(is.na(CleanResultsWide$Revenues), CleanResultsWide$fy)
       
+table(is.na(CleanResultsWide$AccountsReceivable), CleanResultsWide$fy)
 
+table(is.na(CleanResultsWide$CurrentAssets), CleanResultsWide$fy)
+
+table(is.na(CleanResultsWide$CurrentLiabilities), CleanResultsWide$fy)
+
+table(is.na(CleanResultsWide$Inventory), CleanResultsWide$fy)
+
+table(is.na(CleanResultsWide$de), CleanResultsWide$fy)
 
