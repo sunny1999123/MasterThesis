@@ -7,10 +7,12 @@ library(ggplot2)
 
 #Read results of financial info
 Results <- read.csv("result_df.csv")
+Results_2022 <- read.csv("result_2022_df.csv")
+Results <- rbind(Results,Results_2022)
 
 #Delete quarterly data 
 Frames <- unique(Results$frame)
-FramesUsed <- c(NA,"CY2015", "CY2016", "CY2017", "CY2018", "CY2019", "CY2020", "CY2021")
+FramesUsed <- c(NA,"CY2015", "CY2016", "CY2017", "CY2018", "CY2019", "CY2020", "CY2021", "CY2022")
 Results <-Results[Results$frame %in% FramesUsed,]
 
 #Modify start and end to date format

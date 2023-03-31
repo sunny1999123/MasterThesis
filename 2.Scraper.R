@@ -174,7 +174,7 @@ Year_2018 <- DF_Tickers_2018$Year
 Year_2019 <- DF_Tickers_2019$Year
 Year_2020 <- DF_Tickers_2020$Year
 Year_2021 <- DF_Tickers_2021$Year
-Year_2022 <- DF_Tickers_2021$Year
+Year_2022 <- DF_Tickers_2022$Year
 
 
 
