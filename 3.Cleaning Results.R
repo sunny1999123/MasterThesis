@@ -308,7 +308,7 @@ DF_results <- DF_results %>%
 # 
 
 #Name = Debt
-
+#DEBT IS LATER CALCULATED
 
 #-----------------------------------------------------------------
 #equity
@@ -629,7 +629,7 @@ desc_counts_LongDebt$desc
 #(Removal of) labels that are (not) of interest
 LongTermDebt <- c("LongTermDebtNoncurrent", "LongTermDebt",
          "LongTermDebtAndCapitalLeaseObligations", "LongTermDebtFairValue",
-         "OtherLongTermDebt")
+         "OtherLongTermDebt", "UnsecuredLongTermDebt")
 
 #Create list of interesting variables (Not always needed)
 Longtermdebt_list <- desc_counts_LongDebt[(desc_counts_LongDebt$desc %in% LongTermDebt), ]$desc
@@ -1054,15 +1054,18 @@ InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","Curre
                          "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
                          "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
                          "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
+length(InterestedVariables)
 
+years <- c("2017","2018","2019","2020","2021" )
 
 Clean_results_df <- DF_results[DF_results$desc %in% InterestedVariables,]
+Clean_results_df <- Clean_results_df[Clean_results_df$fy %in% years,]
 
 
-#Long to wide format and calculate debt 
+#Long to wide format and calculate debt and EBITDA
 CleanResultsWide <- pivot_wider(Clean_results_df, names_from = desc, values_from = val, values_fill = NA, id_cols = c("symbol", "fy", "FY_symbol"))
 CleanResultsWide$debt <- CleanResultsWide$Assets- CleanResultsWide$Equity
-CleanResultsWide$EBITDA <- CleanResultsWide$OperatingIncomeLoss +CleanResultsWide$DepreciationAmortization
+CleanResultsWide$EBITDA <- CleanResultsWide$PreTaxIncome +CleanResultsWide$DepreciationAmortization
 
 #Check duplicates
 duplicates <- Clean_results_df %>%
@@ -1073,21 +1076,29 @@ length(unique(duplicates$FY_symbol))#No duplicates
 
 
 
-df_complete_cases <- na.omit(CleanResultsWide) #Only two rows
+df_complete_cases <- na.omit(CleanResultsWide) #Only 328 rows
+
+#Number of observations per year with no missing values
+df_complete_cases %>%
+  group_by(fy) %>%
+  summarise(count = n()) 
+
+
+#Number of observations per year with at least one observation
+DF_results %>%
+  group_by(FY_symbol) %>%
+  slice(1) %>%
+  ungroup() %>%
+  group_by(fy) %>%
+  summarise(count = n()) 
+
+# # Identify rows with 1 or 2 missing values
+# rows_with_missing <- apply(CleanResultsWide[, 3:21], 1, function(x) sum(is.na(x)))
+# rows_with_1_or_2_missing <- which(rows_with_missing >= 1 & rows_with_missing <= 2)
+# 
+# # Create new data frame with selected rows
+# new_df <- CleanResultsWide[rows_with_1_or_2_missing, ]
 
 
 na_counts <- colSums(is.na(CleanResultsWide))
-as.list(sort(na_counts))
-
-
-#Revenues
-
-subset_df_rev <- CleanResultsWide[is.na(CleanResultsWide$Revenues), ]
-
-
-
-table(is.na(CleanResultsWide$Revenues), CleanResultsWide$fy)
-      
-A_2021 <- filter(Results, symbol=="A", fy=="2021")
-A_20211 <- filter(DF_results, symbol=="A", fy=="2021")
-
+na_counts
