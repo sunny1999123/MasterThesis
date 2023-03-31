@@ -21,7 +21,8 @@ Ticker_symbols_last <- Ticker_Symbols %>%
 
 #Change from wide to long format and remove date. Only select interested years
 Ticker_symbols_last <- subset(Ticker_symbols_last, select = -c(date))
-Ticker_symbols_last <- Ticker_symbols_last[5:11,]
+Years <- c("2015","2016","2017","2018","2019","2020","2021","2022")
+Ticker_symbols_last <- Ticker_symbols_last[Ticker_symbols_last$year %in%Years,]
 
 
 Ticker_symbbol_Long_format <- reshape(Ticker_symbols_last,
