@@ -1,5 +1,5 @@
 # MasterThesis
-![MasterThesis for the MScBA Business Analytics &amp; Management at the RSM](https://user-images.githubusercontent.com/99124885/170338615-b1e85918-6d34-4f75-8196-fde1db4e6699.png)
+![MasterThesis for the MScBA Business Analytics &amp; Management at the RSM].
 
 
 ## Description
