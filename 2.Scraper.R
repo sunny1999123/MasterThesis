@@ -164,6 +164,7 @@ Tickers_2018 <- DF_Tickers_2018$Ticker
 Tickers_2019 <- DF_Tickers_2019$Ticker
 Tickers_2020 <- DF_Tickers_2020$Ticker
 Tickers_2021 <- DF_Tickers_2021$Ticker
+Tickers_2022 <- DF_Tickers_2022$Ticker
 
 
 Year_2015 <- DF_Tickers_2015$Year
@@ -173,6 +174,7 @@ Year_2018 <- DF_Tickers_2018$Year
 Year_2019 <- DF_Tickers_2019$Year
 Year_2020 <- DF_Tickers_2020$Year
 Year_2021 <- DF_Tickers_2021$Year
+Year_2022 <- DF_Tickers_2021$Year
 
 
 
@@ -238,8 +240,18 @@ result_list_2021 <- foreach(i = seq_along(Tickers_2021), .combine = "rbind") %do
   process_ticker(Tickers_2021[i], Year_2021[i])
 }
 
+result_list_2021 <- foreach(i = seq_along(Tickers_2021), .combine = "rbind") %dopar% {
+  process_ticker(Tickers_2021[i], Year_2021[i])
+}
 
-result_df <- rbind(result_list,result_list_2016,result_list_2017,result_list_2018,result_list_2019,result_list_2020,result_list_2021 )
+result_list_2022 <- foreach(i = seq_along(Tickers_2022), .combine = "rbind") %dopar% {
+  process_ticker(Tickers_2022[i], Year_2022[i])
+}
+
+write.csv(result_list_2022, "result_2022_df.csv", row.names = FALSE)
+
+
+result_df <- rbind(result_list,result_list_2016,result_list_2017,result_list_2018,result_list_2019,result_list_2020,result_list_2021,result_list_2022 )
 write.csv(result_df, "result_df.csv", row.names = FALSE)
 
 
