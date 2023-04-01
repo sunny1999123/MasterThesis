@@ -248,6 +248,17 @@ result_list_2022 <- foreach(i = seq_along(Tickers_2022), .combine = "rbind") %do
   process_ticker(Tickers_2022[i], Year_2022[i])
 }
 
+result_list_2022_remaining <- foreach(i = seq_along(Difference_2022), .combine = "rbind") %dopar% {
+  process_ticker(Difference_2022[i], years_2022_remaining[i])
+}
+
+write.csv(result_list_2022_remaining, "result_2022_remaining_df.csv", row.names = FALSE)
+
+years_2022_remaining <- Year_2022[1:55]
+result_2022 <- read.csv("result_2022_df.csv", sep=",")
+tickers_2022_realized <- unique(result_2022$symbol)
+Difference_2022 <- setdiff(Tickers_2022,tickers_2022_realized)
+
 write.csv(result_list_2022, "result_2022_df.csv", row.names = FALSE)
 
 
