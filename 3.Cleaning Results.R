@@ -8,12 +8,13 @@ library(ggplot2)
 #Read results of financial info
 Results <- read.csv("result_df.csv")
 Results_2022 <- read.csv("result_2022_df.csv")
-Results <- rbind(Results,Results_2022)
+Results_2022_remaining <- read.csv("result_2022_remaining_df.csv")
+Results <- rbind(Results,Results_2022,Results_2022_remaining)
 
 #Delete quarterly data 
-Frames <- unique(Results$frame)
-FramesUsed <- c(NA,"CY2015", "CY2016", "CY2017", "CY2018", "CY2019", "CY2020", "CY2021", "CY2022")
-Results <-Results[Results$frame %in% FramesUsed,]
+# Frames <- unique(Results$frame)
+# FramesUsed <- c(NA,"CY2015", "CY2016", "CY2017", "CY2018", "CY2019", "CY2020", "CY2021", "CY2022")
+# Results <-Results[Results$frame %in% FramesUsed,]
 
 #Modify start and end to date format
 Results$start <- as.Date(Results$start)
@@ -1052,14 +1053,21 @@ DF_results <- DF_results %>%
 
 
 
+
 InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities","Inventory",
                          "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
                          "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
                          "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
+
+InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities",
+                         "Debt","Equity", "NetIncomeLoss", "Assets", "DepreciationAmortization",
+                         "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
+                         "PreTaxIncome", "Cash", "CashFlowOperations")
+
+
 length(InterestedVariables)
 
-years <- c("2017","2018","2019","2020","2021" )
-
+years <- c("2017","2018","2019","2020","2021","2022" )
 Clean_results_df <- DF_results[DF_results$desc %in% InterestedVariables,]
 Clean_results_df <- Clean_results_df[Clean_results_df$fy %in% years,]
 
