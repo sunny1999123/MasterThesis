@@ -1116,3 +1116,6 @@ DF_results %>%
 
 na_counts <- colSums(is.na(CleanResultsWide))
 na_counts
+
+
+write.csv(CleanResultsWide, "CleanedResults.csv", row.names = FALSE)
