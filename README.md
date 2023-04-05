@@ -42,8 +42,15 @@ Input file: Results_2022_df.csv
 
 Input file: Result_df.csv
 
-Output file: Final_df.csv
+Output file: CleanedResults.csv
 
+- 4.Variable Calculation.R
+
+Description: this R file takes the cleaned financial information as input and calculated all the various features that are needed
+
+Input file: CleanedResults.csv
+
+Output file: NA
 
 
 
