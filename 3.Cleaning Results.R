@@ -1054,10 +1054,10 @@ DF_results <- DF_results %>%
 
 
 
-InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities","Inventory",
-                         "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
-                         "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
-                         "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
+#InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities","Inventory",
+ #                        "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
+  #                       "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
+   #                      "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
 
 InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities",
                          "Debt","Equity", "NetIncomeLoss", "Assets", "DepreciationAmortization",
@@ -1118,4 +1118,4 @@ na_counts <- colSums(is.na(CleanResultsWide))
 na_counts
 
 
-write.csv(CleanResultsWide, "CleanedResults.csv", row.names = FALSE)
+write.csv(df_complete_cases, "CleanedResults.csv", row.names = FALSE)
