@@ -1054,10 +1054,10 @@ DF_results <- DF_results %>%
 
 
 
-#InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities","Inventory",
- #                        "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
-  #                       "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
-   #                      "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
+InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities","Inventory",
+                         "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
+                         "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
+                         "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
 
 InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities",
                          "Debt","Equity", "NetIncomeLoss", "Assets", "DepreciationAmortization",
@@ -1090,7 +1090,22 @@ length(unique(duplicates$FY_symbol))#No duplicates
 
 
 
+# Impute missing values with the mean of each firm for columns 4 to 25
+df_imputed <- CleanResultsWide %>%
+  group_by(symbol) %>%
+  mutate_at(vars(4:25), 
+            ~ifelse(is.na(.), mean(., na.rm = TRUE), 
+                    ifelse(is.nan(mean(., na.rm = TRUE)), NA, mean(., na.rm = TRUE))))
+
+
+
+df_complete_cases1 <- na.omit(df_imputed) #Only 328 rows
+
+
+
+
 df_complete_cases <- na.omit(CleanResultsWide) #Only 328 rows
+
 
 #Number of observations per year with no missing values
 df_complete_cases %>%
