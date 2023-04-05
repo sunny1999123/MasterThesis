@@ -37,8 +37,8 @@ DF_results <- subset(df_filtered, select = c("symbol", "fy","desc","val" ))
 #Check the sum of the number of unique firms per year , which should equal the number of firms per item
 DF_results$FY_symbol <- paste(DF_results$fy, DF_results$symbol, sep=" ")
 NumberFirms <- unique(DF_results$FY_symbol)
-length(NumberFirms) #answer is 2582
-#So each item used should occur 2582 times 
+length(NumberFirms) #answer is 2999
+#So each item used should occur 2999 times 
 
 #VARIABLE INVESTIGATION
 
@@ -677,7 +677,7 @@ head(desc_counts_FixedAssets,20) #first two names seem to indicate revenue
 desc_counts_FixedAssets$desc
 
 #(Removal of) labels that are (not) of interest
-FixedAss <- c("OtherAssetsNoncurrent","NoncurrentAssets", "AssetsNoncurrent"
+FixedAss <- c("NoncurrentAssets", "AssetsNoncurrent"
 )
 
 #Create list of interesting variables (Not always needed)
@@ -1061,7 +1061,7 @@ InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","Curre
 
 InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities",
                          "Debt","Equity", "NetIncomeLoss", "Assets", "DepreciationAmortization",
-                         "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
+                         "PropertyPlantAndEquipment","FixedAssets","Interest", 
                          "PreTaxIncome", "Cash", "CashFlowOperations")
 
 
@@ -1072,10 +1072,14 @@ Clean_results_df <- DF_results[DF_results$desc %in% InterestedVariables,]
 Clean_results_df <- Clean_results_df[Clean_results_df$fy %in% years,]
 
 
-#Long to wide format and calculate debt and EBITDA
+#Long to wide format and calculate items that can be relied from the data 
 CleanResultsWide <- pivot_wider(Clean_results_df, names_from = desc, values_from = val, values_fill = NA, id_cols = c("symbol", "fy", "FY_symbol"))
 CleanResultsWide$debt <- CleanResultsWide$Assets- CleanResultsWide$Equity
 CleanResultsWide$EBITDA <- CleanResultsWide$PreTaxIncome +CleanResultsWide$DepreciationAmortization
+CleanResultsWide$FixedAssets <- ifelse(is.na(CleanResultsWide$FixedAssets),CleanResultsWide$Assets- CleanResultsWide$CurrentAssets, CleanResultsWide$FixedAssets )
+CleanResultsWide$CurrentAssets <- ifelse(is.na(CleanResultsWide$CurrentAssets),CleanResultsWide$Assets- CleanResultsWide$FixedAssets, CleanResultsWide$CurrentAssets )
+
+
 
 #Check duplicates
 duplicates <- Clean_results_df %>%
