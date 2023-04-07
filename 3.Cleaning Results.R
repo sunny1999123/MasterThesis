@@ -114,7 +114,7 @@ desc_counts_receiv$desc
 
 #(Removal of) labels that are (not) of interest
 Receiv <- c("AccountsReceivableNetCurrent", "ReceivablesNetCurrent", "AccountsReceivableGrossCurrent", "AccountsNotesAndLoansReceivableNetCurrent",
-            "AccountsReceivableNet","AccountsAndOtherReceivablesNetCurrent", "AccountsReceivableNetNoncurrent", "OtherReceivablesGrossCurrent",
+            "AccountsReceivableNet","AccountsAndOtherReceivablesNetCurrent", "AccountsReceivableNetNoncurrent", "AccountsReceivableRelatedPartiesCurrent",
             "AccountsReceivableGross", "AccountsAndNotesReceivableNet", "ReceivablesFromCustomers", "AccountsReceivableSale",
             "AccountsReceivableGrossNoncurrent")
 
@@ -573,7 +573,8 @@ desc_counts_Plant$desc
 
 #(Removal of) labels that are (not) of interest
 Pla <- c("PropertyPlantAndEquipmentNet","PropertyPlantAndEquipmentGross", "PropertyPlantAndEquipmentAdditions",
-           "PropertyPlantAndEquipmentOther", "PropertyPlantAndEquipmentDisposals","PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization"
+           "PropertyPlantAndEquipmentOther", "PropertyPlantAndEquipmentDisposals","PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization",
+        "PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization" 
 )
 
 #Create list of interesting variables (Not always needed)
@@ -1053,12 +1054,14 @@ DF_results <- DF_results %>%
 
 
 
+#SCENARIO 1
+#InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities","Inventory",
+ #                        "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
+  #                       "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
+   #                      "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
 
-InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities","Inventory",
-                         "Debt","Equity", "NetIncomeLoss", "Assets", "CostGoodsSold", "DepreciationAmortization",
-                         "PropertyPlantAndEquipment","LongTermDebt","FixedAssets", "OperatingIncomeLoss","Interest", 
-                         "PreTaxIncome", "Cash", "Dividend", "CashFlowOperations", "ResearchDevelopment")
 
+#SCENARIO 2
 InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities",
                          "Debt","Equity", "NetIncomeLoss", "Assets", "DepreciationAmortization",
                          "PropertyPlantAndEquipment","FixedAssets","Interest", 
@@ -1091,15 +1094,12 @@ length(unique(duplicates$FY_symbol))#No duplicates
 
 
 # Impute missing values with the mean of each firm for columns 4 to 25
-df_imputed <- CleanResultsWide %>%
-  group_by(symbol) %>%
-  mutate_at(vars(4:25), 
-            ~ifelse(is.na(.), mean(., na.rm = TRUE), 
-                    ifelse(is.nan(mean(., na.rm = TRUE)), NA, mean(., na.rm = TRUE))))
+# df_imputed <- CleanResultsWide %>%
+#   group_by(symbol) %>%
+#   mutate_at(vars(4:25), 
+#             ~ifelse(is.na(.), mean(., na.rm = TRUE), 
+#                     ifelse(is.nan(mean(., na.rm = TRUE)), NA, mean(., na.rm = TRUE))))
 
-
-
-df_complete_cases1 <- na.omit(df_imputed) #Only 328 rows
 
 
 
@@ -1114,7 +1114,7 @@ df_complete_cases %>%
 
 
 #Number of observations per year with at least one observation
-DF_results %>%
+Clean_results_df %>%
   group_by(FY_symbol) %>%
   slice(1) %>%
   ungroup() %>%
@@ -1134,3 +1134,4 @@ na_counts
 
 
 write.csv(df_complete_cases, "CleanedResults.csv", row.names = FALSE)
+
