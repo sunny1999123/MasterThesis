@@ -157,5 +157,5 @@ for (col in cols) {
 
 #Only keep the interested variables 
 Final_data <- cbind(normalized_results[,1:3],normalized_results[,20:55], normalized_results[,62])
-
+write.csv(Final_data, "PreDimensionalityData")
 
