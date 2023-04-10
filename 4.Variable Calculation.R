@@ -5,20 +5,11 @@ library(tidyr)
 library(ggplot2)
 library(scales)
 library(robustHD)
+library(DescTools)
+
 #Load dataframe
 Results <- as.data.frame(read.csv("CleanedResults.csv"))
 Results <-Results %>% arrange(symbol, fy)
-
-#Winsorize
-winsorize_cols <- function(df, lower_quantile = 0.025, upper_quantile = 0.975) {
-  df_winsorized <- df
-  for (i in 4:19) {
-    df_winsorized[, i] <- winsorize(df[, i], probs = c(lower_quantile, upper_quantile))
-  }
-  df_winsorized
-}
-
-Results <- winsorize_cols(Results, 0.05, 0.95)
 
 
 
@@ -65,12 +56,6 @@ Results <- Results %>%
     ChangeInDebt = debt - lag(debt, default = first(debt))
   )
 
-#Delete 2017 Rows (STILL DECIDE TO USE)
-# Results <- Results %>% 
-#   group_by(symbol) %>% 
-#   slice(-1)
-# Results <- filter(Results, fy!="2017")
-
 
 
 #Delte inf rows
@@ -78,27 +63,99 @@ numeric_cols <- sapply(Results, is.numeric)
 Results <- Results[apply(Results[, numeric_cols], 1, function(x) all(is.finite(x))), ]
 
 
-#Rescale variables
-rescale_vars <- function(data, vars, range=c(0.1, 0.9)) {
-  # Select the specified variables
-  selected_vars <- data[, vars]
-  # Scale the variables to be between 0 and 1
-  scaled_vars <- as.data.frame(scale(selected_vars))
-  # Rescale the variables to the specified range
-  rescaled_vars <- apply(scaled_vars, 2, rescale, to=range)
-  # Combine the rescaled variables with the remaining columns
-  new_data <- cbind(data[, -vars], rescaled_vars)
-  # Return the new data frame
-  return(new_data)
-}
-final_data <- rescale_vars(Results, 20:ncol(Results), c(0.1, 0.9))
-
 #EM calculation 
-final_data$TotalCurrentAccruals <- (final_data$CurrentAssets- lag(final_data$CurrentAssets, default = first(final_data$CurrentAssets)))
+Results <- Results %>%
+  group_by(symbol) %>%
+  mutate(
+    DV = ((CurrentAssets - lag(CurrentAssets, default = first(CurrentAssets)))-(CurrentLiabilities - lag(CurrentLiabilities, default = first(CurrentLiabilities)))
+       -(Cash - lag(Cash, default = first(Cash)))-DepreciationAmortization)/lag(Assets, default = first(Assets)),
+    IV1 = 1/lag(Assets, default = first(Assets)),
+    IV2 = ((Revenues - lag(Revenues, default = first(Revenues)))-(AccountsReceivable - lag(AccountsReceivable, default = first(AccountsReceivable))))/lag(Assets, default = first(Assets)),
+    IV3 = PropertyPlantAndEquipment/lag(Assets, default = first(Assets)),
+    IV4 = ROA
+  )
+
+
+#Delete 2017 Rows/first rows (STILL DECIDE TO USE)
+Results <- Results %>%
+  group_by(symbol) %>%
+  slice(-1)
+# Results <- filter(Results, fy!="2017")
+
+#Regression
+model <- lm(DV ~ IV1+IV2+IV3+IV4, data= Results)
+Results$DiscretionaryAccruals <- resid(model)
+
+
+# Compute the mean and standard deviation of the DiscretionaryAccruals column
+mean <- mean(Results$DiscretionaryAccruals)
+std <- sd(Results$DiscretionaryAccruals)
+
+# Create the DiscretionaryAccrualsBinary column using ifelse() function
+Results$DiscretionaryAccrualsBinary <- ifelse(Results$DiscretionaryAccruals >= mean - std & 
+                                                Results$DiscretionaryAccruals <= mean + std, 
+                                              0, 1)
+
+#Checking distribution of EM proxy
+Results %>% 
+  group_by(DiscretionaryAccrualsBinary) %>%
+  summarise(count=n())
+
+
+#Winsorize
+# winsorize_cols <- function(df, lower_quantile = 0.01, upper_quantile = 0.99) {
+#   df_winsorized <- df
+#   for (i in 20:55) {
+#     df_winsorized[, i] <- winsorize(df[, i], probs = c(lower_quantile, upper_quantile))
+#   }
+#   df_winsorized
+# }
+# ResultsWinsor <- winsorize_cols(Results, 0.01, 0.99)
+
+ResultsWinsor <- Results
+for (i in 20:55) {
+  ResultsWinsor[, i] <- DescTools::winsorize(Results[, i], probs = c(0.01, 0.99))
+}
+
+
+
+#Rescale variables (NOT NEEDED, ONLY NORMALIZE THE VARIABLES)
+# rescale_vars <- function(data, vars, range=c(0.1, 0.9)) {
+#   # Select the specified variables
+#   selected_vars <- data[, vars]
+#   # Scale the variables to be between 0 and 1
+#   scaled_vars <- as.data.frame(scale(selected_vars))
+#   # Rescale the variables to the specified range
+#   rescaled_vars <- apply(scaled_vars, 2, rescale, to=range)
+#   # Combine the rescaled variables with the remaining columns
+#   new_data <- cbind(data[, -vars], rescaled_vars)
+#   # Return the new data frame
+#   return(new_data)
+# }
+# final_data <- rescale_vars(ResultsWinsor, 20:ncol(ResultsWinsor), c(0.1, 0.9))
+
+#Normalized variables 
+normalized_results <- ResultsWinsor
+normalized_results[,20:55] <- scale(normalized_results[,20:55])
+colMeans(normalized_results[,20:55])
+sd(normalized_results[,20:55])
 
 
 
 
 
+
+cols <- names(normalized_results)[20:55]
+
+# Set up the plotting window to show multiple histograms side by side
+par(mfrow = c(2,2)) # change the numbers to adjust the layout
+
+# Generate a histogram for each selected column
+for (col in cols) {
+  hist(normalized_results[[col]], main = col, xlab = "Values")
+}
+
+#Only keep the interested variables 
+Final_data <- cbind(normalized_results[,1:3],normalized_results[,20:55], normalized_results[,62])
 
 
