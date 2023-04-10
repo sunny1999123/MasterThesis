@@ -114,7 +114,7 @@ Results %>%
 
 ResultsWinsor <- Results
 for (i in 20:55) {
-  ResultsWinsor[, i] <- DescTools::winsorize(Results[, i], probs = c(0.01, 0.99))
+  ResultsWinsor[, i] <- winsorize(Results[, i], probs = c(0.01, 0.99))
 }
 
 
@@ -157,5 +157,5 @@ for (col in cols) {
 
 #Only keep the interested variables 
 Final_data <- cbind(normalized_results[,1:3],normalized_results[,20:55], normalized_results[,62])
-write.csv(Final_data, "PreDimensionalityData")
+write.csv(Final_data, "PreDimensionalityData", row.names = FALSE)
 
