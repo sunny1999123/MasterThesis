@@ -39,6 +39,10 @@ DF_results$FY_symbol <- paste(DF_results$fy, DF_results$symbol, sep=" ")
 NumberFirms <- unique(DF_results$FY_symbol)
 length(NumberFirms) #answer is 2999
 #So each item used should occur 2999 times 
+DF_results %>%
+  group_by(fy) %>%
+  summarize(n_unique_items = n_distinct(FY_symbol))
+
 
 #VARIABLE INVESTIGATION
 
@@ -1131,6 +1135,11 @@ Clean_results_df %>%
 
 na_counts <- colSums(is.na(CleanResultsWide))
 na_counts
+
+
+df_complete_cases %>%
+  group_by(fy) %>%
+  summarize(n_unique_items = n_distinct(FY_symbol))
 
 
 write.csv(df_complete_cases, "CleanedResults.csv", row.names = FALSE)
