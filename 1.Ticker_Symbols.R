@@ -59,6 +59,7 @@ Ticker_symbbol_Long_format <- drop_na(Ticker_symbbol_Long_format)
 #Get first character of SIC code
 #Get Ticker and Year
 Ticker_symbbol_Long_format$SicFirstLetter <- substr(Ticker_symbbol_Long_format$SIC,1,1)
+Tickers_years <- Ticker_symbbol_Long_format[Ticker_symbbol_Long_format$Year %in% c(2018,2019,2020,2021,2022),]
 Tickers <- Ticker_symbbol_Long_format[Ticker_symbbol_Long_format$SicFirstLetter!= "6",]
 Tickers <- subset(Tickers, select=c(Ticker, Year))
 
