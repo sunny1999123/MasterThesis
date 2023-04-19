@@ -10,7 +10,7 @@ library(DescTools)
 #Load dataframe
 Results <- as.data.frame(read.csv("CleanedResults.csv"))
 Results <-Results %>% arrange(symbol, fy)
-
+#Results2 <- Results[Results$fy != 2017,]
 
 
 #Variable calculation
@@ -58,9 +58,13 @@ Results <- Results %>%
 
 
 
-#Delte inf rows
-numeric_cols <- sapply(Results, is.numeric)
-Results <- Results[apply(Results[, numeric_cols], 1, function(x) all(is.finite(x))), ]
+#Handle inf numbers
+#numeric_cols <- sapply(Results, is.numeric)
+#Results <- Results[apply(Results[, numeric_cols], 1, function(x) all(is.finite(x))), ]
+Results[] <- lapply(Results, function(x) ifelse(is.infinite(x), 0, x))
+Results %>%
+  group_by(fy) %>%
+  summarize(n_unique_items = n_distinct(FY_symbol))
 
 
 #EM calculation 
@@ -80,7 +84,7 @@ Results <- Results %>%
 Results <- Results %>%
   group_by(symbol) %>%
   slice(-1)
-# Results <- filter(Results, fy!="2017")
+#Resultsv2 <- filter(Results, fy!="2017")
 
 #Regression
 model <- lm(DV ~ IV1+IV2+IV3+IV4, data= Results)
