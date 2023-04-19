@@ -56,6 +56,9 @@ Results <- Results %>%
     ChangeInDebt = debt - lag(debt, default = first(debt))
   )
 
+#Handle NaN numbers
+Results[, 4:55][is.na(Results[, 4:55])] <- 0
+
 
 
 #Handle inf numbers
@@ -116,11 +119,18 @@ Results %>%
 # }
 # ResultsWinsor <- winsorize_cols(Results, 0.01, 0.99)
 
-ResultsWinsor <- Results
-for (i in 20:55) {
-  ResultsWinsor[, i] <- winsorize(Results[, i], probs = c(0.01, 0.99))
-}
 
+# # Specify columns 4 to 62 to be transformed to numeric
+# cols <- 4:62
+# 
+# # Loop through columns and convert to numeric
+# Results[, cols] <- apply(Results[,cols], 2, as.numeric)
+
+ResultsWinsor <- Results
+
+for (i in 20:55) {
+  ResultsWinsor[, i] <- winsorize(Results[, i], probs = c(0.0001, 0.9999))
+}
 
 
 #Rescale variables (NOT NEEDED, ONLY NORMALIZE THE VARIABLES)
