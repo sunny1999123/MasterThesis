@@ -5,7 +5,7 @@ library(tidyr)
 library(ggplot2)
 library(glmnet)
 library(caret)
-library("tidymodels")
+library(tidymodels)
 library("glmnet")
 library("kernlab")
 library("skimr")
@@ -89,7 +89,7 @@ ggsave("DiscretionaryAccruals.pdf", plot = EMPlot, width = 6, height = 4, dpi = 
 
 
 # set seed for reproducibility
-set.seed(123456)
+set.seed(1234567)
 
 #Set target variables as factor
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
@@ -102,7 +102,6 @@ Results_train <- training(Results_split)
 Results_test <- testing(Results_split)
 
 
-
 #Check if stratifying worked
 Results_test %>% count(DiscretionaryAccrualsBinary) %>% 
   mutate(prop=n/sum(n))
@@ -112,7 +111,7 @@ Results_train %>% count(DiscretionaryAccrualsBinary) %>%
   mutate(prop=n/sum(n))
 
 #Create folds for CV
-set.seed(593222)
+set.seed(1234567)
 cv_folds <- vfold_cv(Results_train, v = 10, strata = DiscretionaryAccrualsBinary)
 cv_folds
 
@@ -157,7 +156,7 @@ lasso_tune_metrics %>% filter(.metric == "accuracy") %>%
 
 #Select best model based on one standard error rule
 lasso_1se_model <- lasso_tune %>% 
-  select_by_one_std_err(metric = "accuracy", desc(penalty))
+  select_best(metric = "accuracy", desc(penalty))
 lasso_1se_model
 
 
