@@ -146,13 +146,16 @@ lasso_tune <- lasso_wf %>%
 #collect metrics 
 lasso_tune_metrics <- lasso_tune %>% 
   collect_metrics()
-lasso_tune_metrics %>% filter(.metric == "accuracy") %>% 
+LassoAccuracy <- lasso_tune_metrics %>% filter(.metric == "accuracy") %>% 
   ggplot(aes(x = penalty, y = mean, 
              ymin = mean - std_err, ymax = mean + std_err)) + 
   geom_errorbar(alpha = 0.5) + 
   geom_point() + 
   scale_x_log10() + 
   labs(y = "Accuracy", x = expression(lambda))
+
+ggsave("LassoAccuracy.pdf", plot = LassoAccuracy, width = 6, height = 4, dpi = 300)
+
 
 #Select best model based on one standard error rule
 lasso_1se_model <- lasso_tune %>% 
@@ -185,4 +188,14 @@ Features <- lasso_last_fit %>% extract_fit_parsnip() %>%
 
 
 
+
+
+Features$RoundedEsimate <- round(Features$estimate, 3)
+Features$estimate <- NULL
+
+FeatureRemoval <- subset(Features, RoundedEsimate == 0)
+NonInterestedVariables <- FeatureRemoval[,1]
+
+
+ResultsFiltered <- Results[,!(colnames(Results) %in% NonInterestedVariables)]
 
