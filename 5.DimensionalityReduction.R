@@ -194,8 +194,10 @@ Features$RoundedEsimate <- round(Features$estimate, 3)
 Features$estimate <- NULL
 
 FeatureRemoval <- subset(Features, RoundedEsimate == 0)
-NonInterestedVariables <- FeatureRemoval[,1]
-
+NonInterestedVariables <- as.character(FeatureRemoval$term)
 
 ResultsFiltered <- Results[,!(colnames(Results) %in% NonInterestedVariables)]
 
+
+
+write.csv(ResultsFiltered, "Filtered_Results.csv", row.names = FALSE)
