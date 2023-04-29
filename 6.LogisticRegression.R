@@ -16,13 +16,14 @@ library("knitr")
 
 Results <- as.data.frame(read.csv("Filtered_Results.csv"))
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
-  
+Results$DiscretionaryAccrualsBinary <- factor(Results$DiscretionaryAccrualsBinary, levels = c("1", "0"))
+str(Results$DiscretionaryAccrualsBinary)
 #-------
 #Random Forest
 #------
 
 set.seed(12345678)
-Results_split <- initial_split(data = Results, prop = 0.6, 
+Results_split <- initial_split(data = Results, prop = 0.7, 
                                strata = DiscretionaryAccrualsBinary)
 
 
@@ -35,7 +36,8 @@ cv_folds <- Results_train %>% vfold_cv(v = 10, strata = DiscretionaryAccrualsBin
 
 
 rf_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
-  update_role(symbol, fy, FY_symbol, new_role = "ignored") 
+  update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
+  step_downsample(DiscretionaryAccrualsBinary)
 
 
 rf_model_tune <- rand_forest(mtry = tune(), trees = tune()) %>%
@@ -46,7 +48,7 @@ rf_tune_wf <- workflow() %>%
   add_recipe(rf_recipe) %>%
   add_model(rf_model_tune)
 
-class_metrics <- metric_set(accuracy, kap, sensitivity, 
+class_metrics <- metric_set(accuracy, sensitivity, 
                             specificity, roc_auc)
 
 registerDoParallel()
@@ -55,7 +57,7 @@ set.seed(12345678)
 rf_tune_res <- tune_grid(
   rf_tune_wf,
   resamples = cv_folds,
-  grid = expand.grid(mtry = 1:12, trees = seq(50, 500, 50)),
+  grid = expand.grid(mtry = 1:10, trees = seq(50, 2000, 50)),
   metrics = class_metrics,
   control = control_grid(save_pred = TRUE)
 )
@@ -64,8 +66,38 @@ rf_tune_res <- tune_grid(
 rf_tune_res %>%
   collect_metrics()
 
+
+RF_sens_spec <- rf_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("sensitivity", "specificity")) %>%
+  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
+             colour = .metric)) +
+  geom_errorbar() + 
+  geom_line() +
+  geom_point() +
+  facet_grid(.metric ~ ., scales = "free_y") 
+
+ggsave("RFSensSpec.pdf", plot = RF_sens_spec, width = 6, height = 4, dpi = 300)
+
+RF_Accuracy <- rf_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("roc_auc", "accuracy")) %>%
+  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
+             colour = .metric)) +
+  geom_errorbar() + 
+  geom_line() +
+  geom_point() +
+  facet_grid(.metric ~ ., scales = "free_y") 
+
+ggsave("RFAccuracy.pdf", plot = RF_Accuracy, width = 6, height = 4, dpi = 300)
+
+
 best_acc <- select_best(rf_tune_res, "accuracy")
-rf_final_wf <- finalize_workflow(rf_tune_wf, best_acc)
+best_sens <- select_best(rf_tune_res, "sensitivity")
+best_spec <- select_best(rf_tune_res, "specificity")
+
+
+rf_final_wf <- finalize_workflow(rf_tune_wf, best_sens)
 rf_final_wf
 
 set.seed(9923)
@@ -76,7 +108,12 @@ rf_final_fit %>%
   collect_metrics()
 
 rf_final_fit %>% collect_predictions() %>% 
-  conf_mat(truth = DiscretionaryAccrualsBinary, estimate = .pred_class) 
+  conf_mat(truth =DiscretionaryAccrualsBinary, estimate = .pred_class) 
+
+rf_final_fit %>% collect_predictions() %>% 
+  roc_curve(loan_status, .pred_Default) %>% 
+  autoplot()
+
 
 
 rf_model_vi <- rand_forest(mtry = 6, trees = 1000) %>%
