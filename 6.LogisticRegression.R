@@ -75,7 +75,9 @@ RF_sens_spec <- rf_tune_res %>%
   geom_errorbar() + 
   geom_line() +
   geom_point() +
-  facet_grid(.metric ~ ., scales = "free_y") 
+  facet_grid(.metric ~ ., scales = "free_y")  +
+  scale_color_manual(values=c("black", "black"))
+
 
 ggsave("RFSensSpec.pdf", plot = RF_sens_spec, width = 6, height = 4, dpi = 300)
 
@@ -87,7 +89,8 @@ RF_Accuracy <- rf_tune_res %>%
   geom_errorbar() + 
   geom_line() +
   geom_point() +
-  facet_grid(.metric ~ ., scales = "free_y") 
+  facet_grid(.metric ~ ., scales = "free_y") +
+  scale_color_manual(values=c("black", "black"))
 
 ggsave("RFAccuracy.pdf", plot = RF_Accuracy, width = 6, height = 4, dpi = 300)
 
