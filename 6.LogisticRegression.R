@@ -130,4 +130,7 @@ set.seed(9923)
 rf_vi_fit <- rf_vi_wf %>% fit(data = Results_train)
 
 rf_vi_fit %>% extract_fit_parsnip() %>% vi()
-rf_vi_fit %>% extract_fit_parsnip() %>% vip(geom = "point", num_features = 10)
+RFVI <- rf_vi_fit %>% extract_fit_parsnip() %>% vip(geom = "point", num_features = 10)
+
+ggsave("RFVI.pdf", plot = RFVI, width = 6, height = 4, dpi = 300)
+
