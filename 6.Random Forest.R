@@ -57,7 +57,7 @@ set.seed(12345678)
 rf_tune_res <- tune_grid(
   rf_tune_wf,
   resamples = cv_folds,
-  grid = expand.grid(mtry = 1:10, trees = seq(50, 2000, 50)),
+  grid = expand.grid(mtry = 1:15, trees = seq(50, 2000, 50)),
   metrics = class_metrics,
   control = control_grid(save_pred = TRUE)
 )
