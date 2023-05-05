@@ -51,7 +51,7 @@ xgb_tune_wf <- workflow() %>%
   add_model(xgb_model_tune)
 xgb_tune_wf
 
-class_metrics <- metric_set(accuracy, kap, sensitivity, 
+class_metrics <- metric_set(accuracy, sensitivity, 
                             specificity, roc_auc)
 
 registerDoParallel()
@@ -72,17 +72,22 @@ xgb_tune_res <- tune_grid(
   metrics = class_metrics
 )
 
+saveRDS(xgb_tune_res, "xgb_tune_res.rds")
+
 xgb_tune_metrics <- xgb_tune_res %>%
   collect_metrics()
 xgb_tune_metrics
 
 
-xgb_tune_res %>% 
+xgb_tune_fig <- xgb_tune_res %>% 
   collect_metrics() %>%
   filter(.metric %in% c("accuracy", "sensitivity", "specificity")) %>%
   ggplot(aes(x = trees, y = mean, colour = .metric)) +
   geom_path() +
   facet_wrap(learn_rate ~ tree_depth)
+
+ggsave("XGBAccuracySensSpec.pdf", plot = xgb_tune_fig, width = 6, height = 4, dpi = 300)
+
 
 xgb_tune_metrics %>% 
   filter(tree_depth == 1, learn_rate == 0.1, trees >= 3000 & trees <= 6000) %>% 
@@ -92,7 +97,15 @@ xgb_tune_metrics %>%
 
 xgb_best <- xgb_tune_metrics %>% 
   filter(.metric == "accuracy", tree_depth == 1, learn_rate == 0.01, trees == 3500)
-xgb_final_wf <- finalize_workflow(xgb_tune_wf, xgb_best)
+
+best_acc <- select_best(xgb_tune_res, "accuracy")
+best_sens <- select_best(xgb_tune_res, "sensitivity")
+best_sens
+best_spec <- select_best(xgb_tune_res, "specificity")
+
+
+
+xgb_final_wf <- finalize_workflow(xgb_tune_wf, best_sens)
 xgb_final_wf
 
 xgb_final_fit <- xgb_final_wf %>%
