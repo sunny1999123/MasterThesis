@@ -56,7 +56,7 @@ class_metrics <- metric_set(accuracy, sensitivity,
 
 
 set.seed(12345678)
-cv_folds <- Results_train %>% vfold_cv(v = 2, strata = DiscretionaryAccrualsBinary)
+cv_folds <- Results_train %>% vfold_cv(v = 10, strata = DiscretionaryAccrualsBinary)
 
 
 # Perform 10-fold cross-validation tuning
@@ -64,7 +64,7 @@ set.seed(123)
 svm_tune_res <- tune_grid(
     svm_wflow, 
     resamples = cv_folds,
-    grid = expand.grid(margin = c("0.0001", "0.001", "0.01", "0.1", "1", "10", "100"), cost = seq(0.1, 100, 10)),
+    grid = expand.grid(margin = c("0.0001", "0.001", "0.01", "0.1", "1", "10", "100"), cost = c("0.0001", "0.001", "0.01", "0.1", "1", "10", "100")),
     metrics = class_metrics,
     control = control_grid(verbose = TRUE)
   )
