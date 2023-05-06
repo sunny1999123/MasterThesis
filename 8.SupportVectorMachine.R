@@ -18,9 +18,17 @@ library("e1071")
 
 
 Results <- as.data.frame(read.csv("Filtered_Results.csv"))
+#Results <- subset(Results, select = c(25:34))
+
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
 Results$DiscretionaryAccrualsBinary <- factor(Results$DiscretionaryAccrualsBinary, levels = c("1", "0"))
 str(Results$DiscretionaryAccrualsBinary)
+
+
+# list <- c("ChangeInWorkingCaitalToAssets", "ChangeInCurrentRatio", "SalestoCash", "CashFlowOperationsToDebt",
+#           "ROA", "WorkingCaitalToAssets", "CurrentRatio", "SalesToTotalAssets", "DepreciationOverPlant",
+#           "ChangeInWorkingCapital", "DiscretionaryAccrualsBinary")
+# Results <- Results[, names(Results) %in% list]
 
 
 set.seed(912340)
@@ -36,14 +44,16 @@ svm_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
   update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
   step_downsample(DiscretionaryAccrualsBinary)
 
+# svm_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
+#   step_downsample(DiscretionaryAccrualsBinary)
 
 # Create a model specification
-#svm_spec <- svm_llinear(mode = "classification", cost = tune(), margin = tune())
+svm_spec <- svm_rbf(mode = "classification", cost = tune(), rbf_sigma = tune())
 # Create a workflow
 svm_wflow <- workflow() %>%
   add_recipe(svm_recipe) %>%
   add_model(svm_spec)
-
+?svm_rbf
 # Define the search grid for tuning
 # svm_grid <- grid_latin_hypercube(
 #   cost(),
@@ -56,7 +66,7 @@ class_metrics <- metric_set(accuracy, sensitivity,
 
 
 set.seed(12345678)
-cv_folds <- Results_train %>% vfold_cv(v = 10, strata = DiscretionaryAccrualsBinary)
+cv_folds <- Results_train %>% vfold_cv(v = 2, strata = DiscretionaryAccrualsBinary)
 
 
 # Perform 10-fold cross-validation tuning
@@ -64,10 +74,16 @@ set.seed(123)
 svm_tune_res <- tune_grid(
     svm_wflow, 
     resamples = cv_folds,
-    grid = expand.grid(margin = c("0.0001", "0.001", "0.01", "0.1", "1", "10", "100"), cost = c("0.0001", "0.001", "0.01", "0.1", "1", "10", "100")),
+    grid = expand.grid(rbf_sigma = 10^seq(-4, -1, by = 1), cost =  10^seq(-4, 0, by = 1)),
     metrics = class_metrics,
     control = control_grid(verbose = TRUE)
   )
+
+
+
+
+
+saveRDS(svm_tune_res, "svm_tune_res.rds")
 
 svm_tune_metrics <- svm_tune_res %>%
   collect_metrics()
@@ -75,14 +91,16 @@ svm_tune_metrics
 
 svm_sens_spec <- svm_tune_res %>%
   collect_metrics() %>%
-  filter(.metric %in% c("sensitivity", "specificity")) %>%
-  ggplot(aes(x = cost, y = mean, 
+  filter(.metric %in% c("accuracy","sensitivity", "specificity")) %>%
+  ggplot(aes(x = rbf_sigma, y = mean, 
              colour = .metric)) +
   geom_line() +
   geom_point() +
   facet_grid(.metric ~ ., scales = "free_y")  +
-  scale_color_manual(values=c("black", "blue"))
+  scale_color_manual(values=c("black", "blue", "green"))
 
+
+ggsave("SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, dpi = 300)
 
 
 
@@ -91,10 +109,13 @@ svm_sens_spec <- svm_tune_res %>%
 
 
 best_acc <- select_best(svm_tune_res, "accuracy")
+best_acc
+
+
 best_sens <- select_best(svm_tune_res, "sensitivity")
 best_sens
 best_spec <- select_best(svm_tune_res, "specificity")
-
+best_spec
 
 
 
