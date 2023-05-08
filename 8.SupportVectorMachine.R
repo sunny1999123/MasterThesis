@@ -18,18 +18,19 @@ library("e1071")
 
 
 Results <- as.data.frame(read.csv("Filtered_Results.csv"))
-#Results <- subset(Results, select = c(25:34))
 
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
 Results$DiscretionaryAccrualsBinary <- factor(Results$DiscretionaryAccrualsBinary, levels = c("1", "0"))
 str(Results$DiscretionaryAccrualsBinary)
 
 
-# list <- c("ChangeInWorkingCaitalToAssets", "ChangeInCurrentRatio", "SalestoCash", "CashFlowOperationsToDebt",
-#           "ROA", "WorkingCaitalToAssets", "CurrentRatio", "SalesToTotalAssets", "DepreciationOverPlant",
-#           "ChangeInWorkingCapital", "DiscretionaryAccrualsBinary")
-# Results <- Results[, names(Results) %in% list]
 
+#List of ABC
+List <- c("EBITDAMarginRatio"      ,         "ChangeInNetIncomeLossToSales"    ,"ChangeInSalesToTotalAssets" ,    
+"SalestoWorkingCapital"   ,        "DepreciationOverPlant"       ,    "AccountsReceivableTurnover"   ,  
+"DaysSalesinAccountingReceivable", "ChangeInWorkingCaitalToAssets"  , "ChangeInDepreciationOverPlant"  ,
+"ChangeInTimesInterestEarned", "DiscretionaryAccrualsBinary")  
+Results <- Results[, names(Results) %in% List]
 
 set.seed(912340)
 Results_split <- initial_split(data = Results, prop = 0.7, 
@@ -40,12 +41,12 @@ Results_train <- training(Results_split)
 Results_test <- testing(Results_split)
 
 # Create a recipe
-svm_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
-  update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
-  step_downsample(DiscretionaryAccrualsBinary)
-
 # svm_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
+#   update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
 #   step_downsample(DiscretionaryAccrualsBinary)
+
+ svm_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
+   step_downsample(DiscretionaryAccrualsBinary)
 
 # Create a model specification
 svm_spec <- svm_rbf(mode = "classification", cost = tune(), rbf_sigma = tune())
@@ -53,7 +54,7 @@ svm_spec <- svm_rbf(mode = "classification", cost = tune(), rbf_sigma = tune())
 svm_wflow <- workflow() %>%
   add_recipe(svm_recipe) %>%
   add_model(svm_spec)
-?svm_rbf
+
 # Define the search grid for tuning
 # svm_grid <- grid_latin_hypercube(
 #   cost(),
@@ -74,7 +75,7 @@ set.seed(123)
 svm_tune_res <- tune_grid(
     svm_wflow, 
     resamples = cv_folds,
-    grid = expand.grid(rbf_sigma = 10^seq(-4, -1, by = 1), cost =  10^seq(-4, 0, by = 1)),
+    grid = expand.grid(rbf_sigma = 10^seq(-4, 1, by = 1), cost =  10^seq(-4, 1, by = 1)),
     metrics = class_metrics,
     control = control_grid(verbose = TRUE)
   )
@@ -119,7 +120,7 @@ best_spec
 
 
 
-svm_final_wf <- finalize_workflow(svm_wflow, best_sens)
+svm_final_wf <- finalize_workflow(svm_wflow, best_acc)
 svm_final_wf
 
 svm_final_fit <- svm_final_wf %>%
