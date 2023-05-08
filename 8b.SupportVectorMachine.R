@@ -105,7 +105,7 @@ ggsave("SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, d
 model <- Metric_results %>%
   pivot_wider(names_from = .metric,
               values_from = c("mean", "std_err")) %>%
-  filter(.config == "Preprocessor1_Model40")
+  filter(.config == "Preprocessor1_Model04")
 
 
 
