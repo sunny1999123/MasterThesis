@@ -26,11 +26,11 @@ str(Results$DiscretionaryAccrualsBinary)
 
 
 #List of ABC
-List <- c("EBITDAMarginRatio"      ,         "ChangeInNetIncomeLossToSales"    ,"ChangeInSalesToTotalAssets" ,    
-"SalestoWorkingCapital"   ,        "DepreciationOverPlant"       ,    "AccountsReceivableTurnover"   ,  
-"DaysSalesinAccountingReceivable", "ChangeInWorkingCaitalToAssets"  , "ChangeInDepreciationOverPlant"  ,
-"ChangeInTimesInterestEarned", "DiscretionaryAccrualsBinary")  
-Results <- Results[, names(Results) %in% List]
+# List <- c("EBITDAMarginRatio"      ,         "ChangeInNetIncomeLossToSales"    ,"ChangeInSalesToTotalAssets" ,    
+# "SalestoWorkingCapital"   ,        "DepreciationOverPlant"       ,    "AccountsReceivableTurnover"   ,  
+# "DaysSalesinAccountingReceivable", "ChangeInWorkingCaitalToAssets"  , "ChangeInDepreciationOverPlant"  ,
+# "ChangeInTimesInterestEarned", "DiscretionaryAccrualsBinary")  
+# Results <- Results[, names(Results) %in% List]
 
 set.seed(912340)
 Results_split <- initial_split(data = Results, prop = 0.7, 
@@ -41,12 +41,12 @@ Results_train <- training(Results_split)
 Results_test <- testing(Results_split)
 
 # Create a recipe
-# svm_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
-#   update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
-#   step_downsample(DiscretionaryAccrualsBinary)
+svm_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
+  update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
+  step_downsample(DiscretionaryAccrualsBinary)
 
- svm_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
-   step_downsample(DiscretionaryAccrualsBinary)
+ # svm_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
+   # step_downsample(DiscretionaryAccrualsBinary)
 
 # Create a model specification
 svm_spec <- svm_rbf(mode = "classification", cost = tune(), rbf_sigma = tune())
@@ -67,7 +67,7 @@ class_metrics <- metric_set(accuracy, sensitivity,
 
 
 set.seed(12345678)
-cv_folds <- Results_train %>% vfold_cv(v = 2, strata = DiscretionaryAccrualsBinary)
+cv_folds <- Results_train %>% vfold_cv(v = 10, strata = DiscretionaryAccrualsBinary)
 
 
 # Perform 10-fold cross-validation tuning
@@ -75,20 +75,17 @@ set.seed(123)
 svm_tune_res <- tune_grid(
     svm_wflow, 
     resamples = cv_folds,
-    grid = expand.grid(rbf_sigma = 10^seq(-4, 1, by = 1), cost =  10^seq(-4, 1, by = 1)),
+    grid = expand.grid(rbf_sigma = 10^seq(-5, -1, by = 1), cost =  10*seq(1, 10, by = 1)),
     metrics = class_metrics,
     control = control_grid(verbose = TRUE)
   )
-
-
-
 
 
 saveRDS(svm_tune_res, "svm_tune_res.rds")
 
 svm_tune_metrics <- svm_tune_res %>%
   collect_metrics()
-svm_tune_metrics
+Metric_results <- svm_tune_metrics
 
 svm_sens_spec <- svm_tune_res %>%
   collect_metrics() %>%
@@ -98,29 +95,30 @@ svm_sens_spec <- svm_tune_res %>%
   geom_line() +
   geom_point() +
   facet_grid(.metric ~ ., scales = "free_y")  +
-  scale_color_manual(values=c("black", "blue", "green"))
+  scale_color_manual(values=c("black", "blue", "green")) +
+  labs(x="lambda")
 
 
 ggsave("SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, dpi = 300)
 
 
+model <- Metric_results %>%
+  pivot_wider(names_from = .metric,
+              values_from = c("mean", "std_err")) %>%
+  filter(.config == "Preprocessor1_Model40")
 
 
 
 
-
-best_acc <- select_best(svm_tune_res, "accuracy")
+best_acc <- select(svm_tune_res, "accuracy")
 best_acc
-
-
 best_sens <- select_best(svm_tune_res, "sensitivity")
 best_sens
 best_spec <- select_best(svm_tune_res, "specificity")
 best_spec
 
 
-
-svm_final_wf <- finalize_workflow(svm_wflow, best_acc)
+svm_final_wf <- finalize_workflow(svm_wflow, model)
 svm_final_wf
 
 svm_final_fit <- svm_final_wf %>%
@@ -132,6 +130,14 @@ svm_final_fit %>%
 
 svm_final_fit %>% collect_predictions() %>% 
   conf_mat(truth = DiscretionaryAccrualsBinary, estimate = .pred_class) 
+
+
+
+
+
+
+
+
 
 
 
