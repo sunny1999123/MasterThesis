@@ -70,16 +70,18 @@ for (i in 1:length(hist_list)) {
 
 
 counts <- Results %>% group_by(fy, DiscretionaryAccrualsBinary) %>% summarize(count = n())
-EMPlot <- ggplot(counts, aes(x = DiscretionaryAccrualsBinary, y = count, fill = factor(DiscretionaryAccrualsBinary))) +
+EMPlot <-ggplot(counts, aes(x = DiscretionaryAccrualsBinary, y = count, fill = factor(DiscretionaryAccrualsBinary))) +
   geom_bar(stat = "identity", position = "dodge") +
   geom_text(aes(label = count), position = position_dodge(width = 0.9), vjust = -0.5) +
   facet_grid(fy~., scales = "free_x") +
-  labs(x = "Discretionary Accruals Binary", y = "Count", fill = "Value") +
+  labs(x = "EM Proxy", y = "Count", fill = "EM proxy") +
   scale_x_continuous(breaks = c(0, 1), labels = scales::comma_format(accuracy = 1)) +
-  scale_fill_grey(start = 0.3, end = 0.7) +
+  scale_fill_manual(values = c("black", "grey"), name = "Legend", labels = c("Moderate EM", "Extreme EM")) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylim(0, 350) 
+  ylim(0, 350)
+EMPlot
+
 
 ggsave("DiscretionaryAccruals.pdf", plot = EMPlot, width = 6, height = 4, dpi = 300)
 
