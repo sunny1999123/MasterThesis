@@ -126,7 +126,7 @@ Results %>%
 # # Loop through columns and convert to numeric
 # Results[, cols] <- apply(Results[,cols], 2, as.numeric)
 PreWinsorizedResults <- Results
-write.csv(PreWinsorizedResults, "PreWinsorized", row.names = FALSE)
+write.csv(PreWinsorizedResults, "PreWinsorized.csv", row.names = FALSE)
 
 ResultsWinsor <- Results
 
