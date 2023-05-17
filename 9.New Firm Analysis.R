@@ -120,8 +120,6 @@ getData <- function(ticker, year) {
 
 
 
-test <- getData("AAPL", 2021)
-TEST2 <- cleanData(test)
 
 #Clean the data
 cleanData <- function(data) {
@@ -1155,19 +1153,22 @@ FeatureCalculation <- function(data) {
       IV3 = PropertyPlantAndEquipment/lag(Assets, default = first(Assets)),
       IV4 = ROA
     )
-  model <- lm(DV ~ IV1+IV2+IV3+IV4, data= data)
-  data$DiscretionaryAccruals <- resid(model)
-  mean <- mean(data$DiscretionaryAccruals)
-  std <- sd(data$DiscretionaryAccruals)
-  
-  # Create the DiscretionaryAccrualsBinary column using ifelse() function
-  data$DiscretionaryAccrualsBinary <- ifelse(data$DiscretionaryAccruals >= mean - std & 
-                                               data$DiscretionaryAccruals <= mean + std, 
-                                                0, 1)
+  # 
+  # model <- lm(DV ~ IV1+IV2+IV3+IV4, data= data)
+  # data$DiscretionaryAccruals <- resid(model)
+  # mean <- mean(data$DiscretionaryAccruals)
+  # std <- sd(data$DiscretionaryAccruals)
+  # 
+  # # Create the DiscretionaryAccrualsBinary column using ifelse() function
+  # data$DiscretionaryAccrualsBinary <- ifelse(data$DiscretionaryAccruals >= mean - std & 
+  #                                              data$DiscretionaryAccruals <= mean + std, 
+  #                                               0, 1)
   return(data)
 }
 
 
+test <- getData("AAPL", 2021)
+TEST2 <- cleanData(test)
 
 
 #Set UI
