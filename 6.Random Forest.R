@@ -59,9 +59,10 @@ rf_tune_res <- tune_grid(
   resamples = cv_folds,
   grid = expand.grid(mtry = 1:15, trees = seq(50, 2000, 50)),
   metrics = class_metrics,
-  control = control_grid(save_pred = TRUE)
+  control = control_grid(save_pred = TRUE, verbose = TRUE)
 )
 
+saveRDS(rf_tune_res, "rf_tune_res.rds")
 
 rf_tune_res %>%
   collect_metrics()
