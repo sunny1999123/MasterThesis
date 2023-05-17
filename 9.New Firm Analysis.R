@@ -1101,6 +1101,7 @@ cleanData <- function(data) {
   return(data)
 }
 
+#Calculate Features
 FeatureCalculation <- function(data) {
   data <-data %>% arrange(fy)
   data$AccountsReceivableTurnover <- data$Revenues/data$AccountsReceivable
@@ -1165,10 +1166,6 @@ FeatureCalculation <- function(data) {
   #                                               0, 1)
   return(data)
 }
-
-
-test <- getData("AAPL", 2021)
-TEST2 <- cleanData(test)
 
 
 #Set UI
