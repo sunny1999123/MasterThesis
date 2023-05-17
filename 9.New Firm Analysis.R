@@ -6,7 +6,10 @@ library(stringr)
 library(dplyr)
 library(data.table)
 library(shinyWidgets)
-
+library(dplyr)
+library(XBRL)
+library(tidyr)
+library(ggplot2)
 #Get CIK symbols per ticker and make a dataframe of it from SEC api
 INFO <- read_json("https://www.sec.gov/files/company_tickers.json")
 INFO <- rbindlist(INFO)
@@ -117,39 +120,8 @@ getData <- function(ticker, year) {
 
 
 
-#Modify start and end to date format
-Results$start <- as.Date(Results$start)
-Results$end <- as.Date(Results$end)
-
-#Keep only last row of each firm, each year, each financial statement item (deletions are quarterly numbers)
-df_filtered <- Results %>%
-  arrange(symbol, fy, end) %>%  # sort by symbol, fy, and end
-  group_by(symbol, fy, desc) %>%  # group by symbol and fy
-  slice_tail(n = 1) %>%  # keep only the last row within each group
-  ungroup()  # remove grouping
-
-#Get a subset of the data and change order
-DF_results <- subset(df_filtered, select = c("symbol", "fy","desc","val" ))
-
-
-#Clean results 
-#Some variables are stored with different names, every variable needs to be evaluated. 
-
-#Check the sum of the number of unique firms per year , which should equal the number of firms per item
-DF_results$FY_symbol <- paste(DF_results$fy, DF_results$symbol, sep=" ")
-NumberFirms <- unique(DF_results$FY_symbol)
-length(NumberFirms) #answer is 2999
-#So each item used should occur 2999 times 
-DF_results %>%
-  group_by(fy) %>%
-  summarize(n_unique_items = n_distinct(FY_symbol))
-
-
-
-
-
-
-
+test <- getData("AAPL", 2021)
+TEST2 <- cleanData(test)
 
 #Clean the data
 cleanData <- function(data) {
@@ -157,7 +129,7 @@ cleanData <- function(data) {
   data$start <- as.Date(data$start)
   data$end <- as.Date(data$end)
   data <- subset(data, select = c("symbol", "fy","desc","val" ))
-  data$FY_symbol <- data(data$fy, data$symbol, sep=" ")
+  data$FY_symbol <- paste(data$fy, data$symbol, sep=" ")
   # Perform data cleaning steps for variables
   # Revenue
   revenue <- grepl("revenue", data$desc, ignore.case = TRUE)
@@ -221,16 +193,921 @@ cleanData <- function(data) {
     ) %>%
     ungroup() %>%
     select(-receiv_index)
+  #-----------------------------------------------------------------
+  #CurrentAssets
   
+  CurrentAssets <- grepl("Current", data$desc, ignore.case = TRUE)
+  CurrentAssets <- data[CurrentAssets,]
+  
+  desc_counts_currentasset <- CurrentAssets %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_currentasset,10) #first two names seem to indicate revenue
+  desc_counts_currentasset$desc
+  
+  #(Removal of) labels that are (not) of interest
+  Cur_ass <- c("AssetsCurrent", "OtherAssetsCurrent")
+  
+  #Create list of interesting variables (Not always needed)
+  Curr_ass_list <- desc_counts_currentasset[(desc_counts_currentasset$desc %in% Cur_ass), ]$desc
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Curr_ass_index = match(desc, Curr_ass_list),
+      Curr_ass_index = ifelse(is.na(Curr_ass_index), Inf, Curr_ass_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Curr_ass_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Curr_ass_list & !any(desc == "CurrentAssets") & row_number() == match(desc[desc %in% Curr_ass_list][1], desc),
+        "CurrentAssets",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Curr_ass_index)
+  
+  
+  #Name = CurrentAssets
+  
+  #-----------------------------------------------------------------
+  #CurrentLiabilities
+  
+  liabilities <- grepl("Current", data$desc, ignore.case = TRUE)
+  liabilities <- data[liabilities,]
+  
+  desc_counts_currentliabilities <- liabilities %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_currentliabilities,10) #first two names seem to indicate revenue
+  desc_counts_currentliabilities$desc
+  
+  #(Removal of) labels that are (not) of interest
+  Cur_lia <- c("LiabilitiesCurrent", "OtherLiabilitiesCurrent", "OtherAccruedLiabilitiesCurrent","ContractWithCustomerLiabilityCurrent")
+  
+  #Create list of interesting variables (Not always needed)
+  Curr_lia_list <- desc_counts_currentliabilities[(desc_counts_currentliabilities$desc %in% Cur_lia), ]$desc
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Curr_lia_index = match(desc, Curr_lia_list),
+      Curr_lia_index = ifelse(is.na(Curr_lia_index), Inf, Curr_lia_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Curr_lia_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Curr_lia_list & !any(desc == "CurrentLiabilities") & row_number() == match(desc[desc %in% Curr_lia_list][1], desc),
+        "CurrentLiabilities",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Curr_lia_index)
+  
+  #Name = CurrentLiabilities
+  
+  #-----------------------------------------------------------------
+  #Inventory
+  
+  inventory <- grepl("inventory", data$desc, ignore.case = TRUE)
+  inventory <- data[inventory,]
+  
+  desc_counts_inventory <- inventory %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_inventory,10) #first two names seem to indicate revenue
+  desc_counts_inventory$desc
+  
+  #(Removal of) labels that are (not) of interest
+  Inve <- c("InventoryNet", "InventoryFinishedGoodsNetOfReserves","InventoryFinishedGoods","InventoryGross","LIFOInventoryAmount","InventoryNoncurrent"
+            , "InventorySuppliesNetOfReserves")
+  
+  #Create list of interesting variables (Not always needed)
+  Inve_list <- desc_counts_inventory[(desc_counts_inventory$desc %in% Inve), ]$desc
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Curr_inv_index = match(desc, Inve_list),
+      Curr_inv_index = ifelse(is.na(Curr_inv_index), Inf, Curr_inv_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Curr_inv_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Inve_list & !any(desc == "Inventory") & row_number() == match(desc[desc %in% Inve_list][1], desc),
+        "Inventory",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Curr_inv_index)
+  
+  
+  
+  #Name = Inventory
+  
+  
+  #-----------------------------------------------------------------
+  #Debt
+  # 
+  # Debt <- grepl("Debt", data$desc, ignore.case = TRUE)
+  # Debt <- data[Debt,]
+  # 
+  # desc_counts_debt <- Debt %>%
+  #   group_by(desc) %>%
+  #   summarise(count = n())%>%
+  #   arrange(desc(count))
+  # head(desc_counts_debt,20) #first two names seem to indicate revenue
+  # desc_counts_debt$desc
+  # 
+  # 
+  # 
+  # #(Removal of) labels that are (not) of interest
+  # Debt <- c("LongTermDebtNoncurrent", "LongTermDebtCurrent", "LongTermDebt","LongTermDebtAndCapitalLeaseObligations","DebtCurrent"
+  #               , "LongTermDebtFairValue", "DebtInstrumentFaceAmount", "SecuredDebt","UnsecuredDebt")
+  # 
+  # #Create list of interesting variables (Not always needed)
+  # Debt_list <- desc_counts_debt[(desc_counts_debt$desc %in% Debt), ]$desc
+  # 
+  # 
+  # 
+  # 
+  # #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  # data <- data %>%
+  #   group_by(FY_symbol) %>%
+  #   mutate(
+  #     Curr_debt_index = match(desc, Debt_list),
+  #     Curr_debt_index = ifelse(is.na(Curr_debt_index), Inf, Curr_debt_index) # move non-matching to the end
+  #   ) %>%
+  #   arrange(FY_symbol, Curr_debt_index) %>%
+  #   mutate(
+  #     desc = ifelse(
+  #       desc %in% Debt_list & !any(desc == "Debt") & row_number() == match(desc[desc %in% Debt_list][1], desc),
+  #       "Debt",
+  #       desc
+  #     )
+  #   ) %>%
+  #   ungroup() %>%
+  #   select(-Curr_debt_index)
+  # 
+  
+  #Name = Debt
+  #DEBT IS LATER CALCULATED
+  
+  #-----------------------------------------------------------------
+  #equity
+  
+  equity <- grepl("equity", data$desc, ignore.case = TRUE)
+  equity <- data[equity,]
+  
+  desc_counts_equity <- equity %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_equity,20) #first two names seem to indicate revenue
+  desc_counts_equity$desc
+  
+  
+  #(Removal of) labels that are (not) of interest
+  Equity <- c("StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"
+              , "StockholdersEquityOther")
+  
+  #Create list of interesting variables (Not always needed)
+  Equity_list <- desc_counts_equity[(desc_counts_equity$desc %in% Equity), ]$desc
+  
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Curr_equity_index = match(desc, Equity_list),
+      Curr_equity_index = ifelse(is.na(Curr_equity_index), Inf, Curr_equity_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Curr_equity_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Equity_list & !any(desc == "Equity") & row_number() == match(desc[desc %in% Equity_list][1], desc),
+        "Equity",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Curr_equity_index)
+  
+  
+  
+  
+  #Name = Equity
+  
+  #-----------------------------------------------------------------
+  #NET INCOME
+  
+  income <- grepl("income", data$desc, ignore.case = TRUE)
+  income <- data[income,]
+  
+  desc_counts_NetIncome <- income %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_NetIncome,20) 
+  desc_counts_NetIncome$desc
+  
+  
+  
+  #(Removal of) labels that are (not) of interest
+  Income <- c("NetIncomeLoss", "ComprehensiveIncomeNetOfTax"
+              , "OperatingIncomeLoss","IncomeLossFromContinuingOperationsBeforeIncomeTaxesForeign",
+              "IncomeLossFromContinuingOperationsBeforeIncomeTaxesDomestic",
+              "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest,
+                ")
+  
+  #Create list of interesting variables (Not always needed)
+  Income_list <- desc_counts_NetIncome[(desc_counts_NetIncome$desc %in% Income), ]$desc
+  
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Curr_income_index = match(desc, Income_list),
+      Curr_income_index = ifelse(is.na(Curr_income_index), Inf, Curr_income_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Curr_income_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Income_list & !any(desc == "NetIncomeLoss") & row_number() == match(desc[desc %in% Income_list][1], desc),
+        "NetIncomeLoss",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Curr_income_index)
+  
+  
+  
+  
+  #Name = NetIncomeLoss
+  
+  
+  #-----------------------------------------------------------------
+  #Assets
+  
+  Assets <- grepl("Assets", data$desc, ignore.case = TRUE)
+  Assets <- data[Assets,]
+  
+  desc_counts_Assets <- Assets %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_Assets,20) #first two names seem to indicate revenue
+  desc_counts_Assets$desc
+  
+  
+  #(Removal of) labels that are (not) of interest
+  Assets <- c("Assets")
+  
+  #Create list of interesting variables (Not always needed)
+  Assets_list <- desc_counts_Assets[(desc_counts_Assets$desc %in% Assets), ]$desc
+  
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Assets_index = match(desc, Assets_list),
+      Assets_index = ifelse(is.na(Assets_index), Inf, Assets_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Assets_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Assets_list & !any(desc == "Assets") & row_number() == match(desc[desc %in% Assets_list][1], desc),
+        "Assets",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Assets_index)
+  
+  
+  
+  
+  
+  
+  #Name = Assets
+  
+  #-----------------------------------------------------------------
+  #Cost of goods sold
+  
+  Cost <- grepl("Cost", data$desc, ignore.case = TRUE)
+  Cost <- data[Cost,]
+  
+  desc_counts_CostGoodsSold <- Cost %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_CostGoodsSold,10) #first two names seem to indicate revenue
+  desc_counts_CostGoodsSold$desc
+  
+  #(Removal of) labels that are (not) of interest
+  COGS <- c("CostOfGoodsAndServicesSold","CostOfRevenue")
+  
+  #Create list of interesting variables (Not always needed)
+  Cogs_list <- desc_counts_CostGoodsSold[(desc_counts_CostGoodsSold$desc %in% COGS), ]$desc
+  
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      COGS_index = match(desc, Cogs_list),
+      COGS_index = ifelse(is.na(COGS_index), Inf, COGS_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, COGS_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Cogs_list & !any(desc == "CostGoodsSold") & row_number() == match(desc[desc %in% Cogs_list][1], desc),
+        "CostGoodsSold",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-COGS_index)
+  
+  
+  #Name = CostGoodsSold
+  
+  #-----------------------------------------------------------------
+  #Depreciation
+  
+  Depreciation <- grepl("Depreciation", data$desc, ignore.case = TRUE)
+  Depreciation <- data[Depreciation,]
+  
+  desc_counts_Depreciation <- Depreciation %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_Depreciation,10) #first two names seem to indicate revenue
+  desc_counts_Depreciation$desc
+  
+  #(Removal of) labels that are (not) of interest
+  Depre <- c("DepreciationDepletionAndAmortization","Depreciation", "DepreciationAndAmortization",
+             "DepreciationAmortizationAndAccretionNet", "DepreciationNonproduction"
+  )
+  
+  #Create list of interesting variables (Not always needed)
+  Depre_list <- desc_counts_Depreciation[(desc_counts_Depreciation$desc %in% Depre), ]$desc
+  
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Depre_index = match(desc, Depre_list),
+      Depre_index = ifelse(is.na(Depre_index), Inf, Depre_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Depre_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Depre_list & !any(desc == "DepreciationAmortization") & row_number() == match(desc[desc %in% Depre_list][1], desc),
+        "DepreciationAmortization",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Depre_index)
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  #Name = DepreciationAmortization
+  
+  #-----------------------------------------------------------------
+  #plant
+  
+  plant <- grepl("plant", data$desc, ignore.case = TRUE)
+  plant <- data[plant,]
+  
+  desc_counts_Plant <- plant %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_Plant,10) #first two names seem to indicate revenue
+  
+  desc_counts_Plant$desc
+  
+  #(Removal of) labels that are (not) of interest
+  Pla <- c("PropertyPlantAndEquipmentNet","PropertyPlantAndEquipmentGross", "PropertyPlantAndEquipmentAdditions",
+           "PropertyPlantAndEquipmentOther", "PropertyPlantAndEquipmentDisposals","PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization",
+           "PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization" 
+  )
+  
+  #Create list of interesting variables (Not always needed)
+  Plant_list <- desc_counts_Plant[(desc_counts_Plant$desc %in% Pla), ]$desc
+  
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Plant_index = match(desc, Plant_list),
+      Plant_index = ifelse(is.na(Plant_index), Inf, Plant_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Plant_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Plant_list & !any(desc == "PropertyPlantAndEquipment") & row_number() == match(desc[desc %in% Plant_list][1], desc),
+        "PropertyPlantAndEquipment",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Plant_index)
+  
+  
+  # data <- data %>%
+  #   group_by(FY_symbol) %>%
+  #   mutate(
+  #     desc = ifelse(
+  #       desc == "PropertyPlantAndEquipmentNet" &
+  #         !any(desc == "PropertyPlantAndEquipment"),
+  #       "PropertyPlantAndEquipment",
+  #       desc
+  #     )
+  #   ) %>%
+  #   ungroup()
+  
+  #Name = PropertyPlantAndEquipment
+  
+  #-----------------------------------------------------------------
+  #long-term debt
+  
+  Long_term_debt <- grepl("long", data$desc, ignore.case = TRUE)
+  Long_term_debt <- data[Long_term_debt,]
+  
+  desc_counts_LongDebt <- Long_term_debt %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_LongDebt,10) #first two names seem to indicate revenue
+  desc_counts_LongDebt$desc
+  
+  
+  #(Removal of) labels that are (not) of interest
+  LongTermDebt <- c("LongTermDebtNoncurrent", "LongTermDebt",
+                    "LongTermDebtAndCapitalLeaseObligations", "LongTermDebtFairValue",
+                    "OtherLongTermDebt", "UnsecuredLongTermDebt")
+  
+  #Create list of interesting variables (Not always needed)
+  Longtermdebt_list <- desc_counts_LongDebt[(desc_counts_LongDebt$desc %in% LongTermDebt), ]$desc
+  
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      LongDebt_index = match(desc, Longtermdebt_list),
+      LongDebt_index = ifelse(is.na(LongDebt_index), Inf, LongDebt_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, LongDebt_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Longtermdebt_list & !any(desc == "LongTermDebt") & row_number() == match(desc[desc %in% Longtermdebt_list][1], desc),
+        "LongTermDebt",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-LongDebt_index)
+  
+  
+  
+  #Name = LongTermDebt
+  
+  
+  #-----------------------------------------------------------------
+  #FixedAssets
+  
+  FixedAssets <- grepl("assets", data$desc, ignore.case = TRUE)
+  FixedAssets <- data[FixedAssets,]
+  
+  desc_counts_FixedAssets <- FixedAssets %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_FixedAssets,20) #first two names seem to indicate revenue
+  desc_counts_FixedAssets$desc
+  
+  #(Removal of) labels that are (not) of interest
+  FixedAss <- c("NoncurrentAssets", "AssetsNoncurrent"
+  )
+  
+  #Create list of interesting variables (Not always needed)
+  FixedAss_list <- desc_counts_FixedAssets[(desc_counts_FixedAssets$desc %in% FixedAss), ]$desc
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      FixedAssets_index = match(desc, FixedAss_list),
+      FixedAssets_index = ifelse(is.na(FixedAssets_index), Inf, FixedAssets_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, FixedAssets_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% FixedAss_list & !any(desc == "FixedAssets") & row_number() == match(desc[desc %in% FixedAss_list][1], desc),
+        "FixedAssets",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-FixedAssets_index)
+  
+  
+  
+  
+  
+  
+  
+  
+  #Name = FixedAssets
+  
+  #-----------------------------------------------------------------
+  #EBITDA
+  
+  OperatingIncome <- grepl("operating", data$desc, ignore.case = TRUE)
+  OperatingIncome <- data[OperatingIncome,]
+  
+  desc_counts_OperatingIncome <- OperatingIncome %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_OperatingIncome,20) #first two names seem to indicate revenue
+  desc_counts_OperatingIncome$desc
+  
+  
+  #(Removal of) labels that are (not) of interest
+  OperInc <- c("OperatingIncomeLoss","OtherOperatingIncome")
+  
+  #Create list of interesting variables (Not always needed)
+  OperInc_list <- desc_counts_OperatingIncome[(desc_counts_OperatingIncome$desc %in% OperInc), ]$desc
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      OperInc_index = match(desc, OperInc_list),
+      OperInc_index = ifelse(is.na(OperInc_index), Inf, OperInc_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, OperInc_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% OperInc_list & !any(desc == "OperatingIncomeLoss") & row_number() == match(desc[desc %in% OperInc_list][1], desc),
+        "OperatingIncomeLoss",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-OperInc_index)
+  
+  
+  
+  #Name = OperatingIncomeLoss
+  #EBITDA still needs to be calculated: Operating income +depreciation & amortization
+  
+  
+  #-----------------------------------------------------------------
+  #Interest
+  
+  Interest <- grepl("Interest", data$desc, ignore.case = TRUE)
+  Interest <- data[Interest,]
+  
+  desc_counts_Interest <- Interest %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_Interest,20) #first two names seem to indicate revenue
+  desc_counts_Interest$desc
+  
+  
+  #(Removal of) labels that are (not) of interest
+  Inte <- c("InterestExpense","InterestPaidNet", "InterestPaid","InterestExpenseOther")
+  
+  #Create list of interesting variables (Not always needed)
+  Inte_list <- desc_counts_Interest[(desc_counts_Interest$desc %in% Inte), ]$desc
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Inte_index = match(desc, Inte_list),
+      Inte_index = ifelse(is.na(Inte_index), Inf, Inte_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Inte_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Inte_list & !any(desc == "Interest") & row_number() == match(desc[desc %in% Inte_list][1], desc),
+        "Interest",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Inte_index)
+  
+  
+  
+  
+  
+  
+  #Name = Interest
+  
+  
+  #-----------------------------------------------------------------
+  #pre-tax income
+  
+  PreTaxIncome <- grepl("income", data$desc, ignore.case = TRUE)
+  PreTaxIncome <- data[PreTaxIncome,]
+  
+  desc_counts_PreTaxIncome <- income %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_PreTaxIncome,20) #first two names seem to indicate revenue
+  
+  desc_counts_PreTaxIncome$desc
+  
+  
+  #(Removal of) labels that are (not) of interest
+  PretaxInc <- c("IncomeLossFromContinuingOperationsBeforeIncomeTaxesForeign","IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments"
+                 , "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest")
+  
+  #Create list of interesting variables (Not always needed)
+  PretaxInc_list <- desc_counts_PreTaxIncome[(desc_counts_PreTaxIncome$desc %in% PretaxInc), ]$desc
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Pretaxinc_index = match(desc, PretaxInc_list),
+      Pretaxinc_index = ifelse(is.na(Pretaxinc_index), Inf, Pretaxinc_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Pretaxinc_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% PretaxInc_list & !any(desc == "PreTaxIncome") & row_number() == match(desc[desc %in% PretaxInc_list][1], desc),
+        "PreTaxIncome",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Pretaxinc_index)
+  
+  
+  
+  
+  
+  #Name = PreTaxIncome
+  
+  #-----------------------------------------------------------------
+  #cash
+  
+  Cash <- grepl("cash", data$desc, ignore.case = TRUE)
+  Cash <- data[Cash,]
+  
+  desc_counts_Cash <- Cash %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_Cash,40) #first two names seem to indicate revenue
+  desc_counts_Cash$desc
+  
+  #(Removal of) labels that are (not) of interest
+  Cas <- c("CashAndCashEquivalentsAtCarryingValue","CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsPeriodIncreaseDecreaseIncludingExchangeRateEffect",
+           "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents","Cash","CashEquivalentsAtCarryingValue","CashAndCashEquivalentsFairValueDisclosure"
+           
+  )
+  
+  #Create list of interesting variables (Not always needed)
+  Cash_list <- desc_counts_Cash[(desc_counts_Cash$desc %in% Cas), ]$desc
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Cash_index = match(desc, Cash_list),
+      Cash_index = ifelse(is.na(Cash_index), Inf, Cash_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Cash_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Cash_list & !any(desc == "Cash") & row_number() == match(desc[desc %in% Cash_list][1], desc),
+        "Cash",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Cash_index)
+  
+  
+  
+  #Name = cash
+  
+  #-----------------------------------------------------------------
+  #dividend
+  
+  Dividend <- grepl("dividend", data$desc, ignore.case = TRUE)
+  Dividend <- data[Dividend,]
+  
+  desc_counts_Dividend <- Dividend %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_Dividend,20) #first two names seem to indicate revenue
+  desc_counts_Dividend$desc
+  
+  
+  #(Removal of) labels that are (not) of interest
+  Div <- c("PaymentsOfDividendsCommonStock","DividendsCommonStockCash",
+           "PaymentsOfDividends","DividendsCash","DividendsCommonStock","Dividends", "DividendsPreferredStock","DividendsCommonStockStock"
+           
+  )
+  
+  #Create list of interesting variables (Not always needed)
+  Div_list <- desc_counts_Dividend[(desc_counts_Dividend$desc %in% Div), ]$desc
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Div_index = match(desc, Div_list),
+      Div_index = ifelse(is.na(Div_index), Inf, Div_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Div_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Div_list & !any(desc == "Dividend") & row_number() == match(desc[desc %in% Div_list][1], desc),
+        "Dividend",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Div_index)
+  
+  
+  
+  
+  
+  
+  
+  #Name = Dividend
+  
+  #-----------------------------------------------------------------
+  #cash flow Operations
+  
+  Cash_flow <- grepl("cash", data$desc, ignore.case = TRUE)
+  Cash_flow <- data[Cash_flow,]
+  
+  desc_counts_CashFlowOperations <- Cash_flow %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_CashFlowOperations,20) #first two names seem to indicate revenue
+  desc_counts_CashFlowOperations$desc
+  
+  
+  #(Removal of) labels that are (not) of interest
+  CFO <- c("NetCashProvidedByUsedInOperatingActivities","NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
+           "CashProvidedByUsedInOperatingActivitiesDiscontinuedOperations"        
+  )
+  
+  #Create list of interesting variables (Not always needed)
+  CFO_list <- desc_counts_CashFlowOperations[(desc_counts_CashFlowOperations$desc %in% CFO), ]$desc
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      CFO_index = match(desc, CFO_list),
+      CFO_index = ifelse(is.na(CFO_index), Inf, CFO_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, CFO_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% CFO_list & !any(desc == "CashFlowOperations") & row_number() == match(desc[desc %in% CFO_list][1], desc),
+        "CashFlowOperations",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-CFO_index)
+  
+  
+  
+  #Name = CashFlowOperations
+  
+  #-----------------------------------------------------------------
+  #Research & Development
+  
+  Research <- grepl("Research", data$desc, ignore.case = TRUE)
+  Research <- data[Research,]
+  
+  desc_counts_ResearchDevelopment <- Research %>%
+    group_by(desc) %>%
+    summarise(count = n())%>%
+    arrange(desc(count))
+  head(desc_counts_ResearchDevelopment,20) #first two names seem to indicate revenue
+  
+  desc_counts_ResearchDevelopment$desc
+  
+  #(Removal of) labels that are (not) of interest
+  Res <- c("ResearchAndDevelopmentExpense","ResearchAndDevelopmentExpenseExcludingAcquiredInProcessCost",
+           "ResearchAndDevelopmentExpenseSoftwareExcludingAcquiredInProcessCost", "OtherResearchAndDevelopmentExpense"         
+  )
+  
+  #Create list of interesting variables (Not always needed)
+  Res_list <- desc_counts_ResearchDevelopment[(desc_counts_ResearchDevelopment$desc %in% Res), ]$desc
+  
+  
+  
+  #Change per firm per year the variable to the correct name in original dataframe, based on occurence in Rev_list
+  data <- data %>%
+    group_by(FY_symbol) %>%
+    mutate(
+      Res_index = match(desc, Res_list),
+      Res_index = ifelse(is.na(Res_index), Inf, Res_index) # move non-matching to the end
+    ) %>%
+    arrange(FY_symbol, Res_index) %>%
+    mutate(
+      desc = ifelse(
+        desc %in% Res_list & !any(desc == "ResearchDevelopment") & row_number() == match(desc[desc %in% Res_list][1], desc),
+        "ResearchDevelopment",
+        desc
+      )
+    ) %>%
+    ungroup() %>%
+    select(-Res_index)
+  InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities",
+                           "Debt","Equity", "NetIncomeLoss", "Assets", "DepreciationAmortization",
+                           "PropertyPlantAndEquipment","FixedAssets","Interest", 
+                           "PreTaxIncome", "Cash", "CashFlowOperations")
+  data <- data[data$desc %in% InterestedVariables,]
+  
+  data <- pivot_wider(data, names_from = desc, values_from = val, values_fill = NA, id_cols = c("symbol", "fy", "FY_symbol"))
+  data$debt <- data$Assets- data$Equity
+  data$EBITDA <- data$PreTaxIncome +data$DepreciationAmortization
+  data$FixedAssets <- ifelse(is.na(data$FixedAssets),data$Assets- data$CurrentAssets, data$FixedAssets )
+  data$CurrentAssets <- ifelse(is.na(data$CurrentAssets),data$Assets- data$FixedAssets, data$CurrentAssets )
   # Return the cleaned data
   return(data)
 }
 
 
+#
 
-
-
-# Define UI
+#Set UI
 ui <- fluidPage(
   titlePanel("Data Access"),
   sidebarLayout(
@@ -241,14 +1118,13 @@ ui <- fluidPage(
     ),
     mainPanel(
       progress = "progress",
-      verbatimTextOutput("message")  # Use verbatimTextOutput for displaying text
+      verbatimTextOutput("message"),  # Use verbatimTextOutput for displaying text
+      tableOutput("cleanedData")  # Use tableOutput for displaying the cleaned data
     )
   )
 )
 
-# Define server logic
-
-# Define server logic
+#Set Server
 server <- function(input, output) {
   cleanedData <- reactiveVal(NULL)  # Store the cleaned data
   
@@ -271,19 +1147,31 @@ server <- function(input, output) {
       # Increment the progress bar value
       setProgress(1)
       
-      # Perform data cleaning operations
-      cleanedData <- cleanData(data)
-      
       # Update the message based on the retrieved data
-      if (nrow(data()) > 0) {
-        message <- "The data is successfully cleaned."
+      if (!is.null(data)) {
+        message <- "Data successfully retrieved.\n"
+        
+        # Perform data cleaning operations
+        cleanedData <- cleanData(data)  # Call the cleanData function
+        
+        # Update the message based on the cleaned data
+        if (ncol(cleanedData) > 0L) {
+          message <- paste(message, "Data is successfully cleaned.")
+        } else {
+          message <- paste(message, "Data cleaning failed.")
+        }
       } else {
-        message <- "The ticker symbol is unknown or the API did not retrieve any data."
+        message <- "Data retrieval failed."
       }
       
       # Display the message
       output$message <- renderText({
         message  # Use renderText to render the text
+      })
+      
+      # Display the cleaned data
+      output$cleanedData <- renderTable({
+        cleanedData  # Use renderTable to render the data as a table
       })
     })
   })
@@ -292,8 +1180,9 @@ server <- function(input, output) {
 
 
 
-# Run the Shiny app
-shinyApp(ui = ui, server = server)
+
+# Run the app
+shinyApp(ui, server)
 
 
 
@@ -308,41 +1197,6 @@ shinyApp(ui = ui, server = server)
 
 
 
-
-
-# ui <- fluidPage(
-#   titlePanel("Data Access App"),
-#   sidebarLayout(
-#     sidebarPanel(
-#       textInput("ticker", "Ticker Symbol:"),
-#       numericInput("year", "Year:", value = NULL)
-#     ),
-#     mainPanel(
-#       tableOutput("resultTable")
-#     )
-#   )
-# )
-# 
-# server <- function(input, output) {
-#   output$resultTable <- renderTable({
-#     ticker <- input$ticker
-#     year <- input$year
-#     if (is.null(year)) {
-#       # Handle case when year is not provided
-#       return(NULL)
-#     }
-#     if (is.null(ticker)) {
-#       # Handle case when year is not provided
-#       return(NULL)
-#     }
-#     DataAccess(ticker, year)
-#   })
-# }
-# 
-# 
-# 
-# 
-# shinyApp(ui = ui, server = server)
 
 
 
