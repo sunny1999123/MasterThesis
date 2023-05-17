@@ -1,0 +1,13 @@
+name: EarningsManagementDetection
+title: EarningsManagementDetection
+username:
+account: sunny1999
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9128493
+bundleId: 7229302
+url: https://sunny1999.shinyapps.io/EarningsManagementDetection/
+when: 1684330771.39108
+lastSyncTime: 1684330771.39111
+asMultiple: FALSE
+asStatic: FALSE
