@@ -118,9 +118,6 @@ getData <- function(ticker, year) {
   ALL <- bind_rows(GAAP,DEI,SRT,INVEST)
 }
 
-
-
-
 #Clean the data
 cleanData <- function(data) {
   #Pre-processing of data
@@ -1145,15 +1142,25 @@ FeatureCalculation <- function(data) {
     )
   data[, 4:55][is.na(data[, 4:55])] <- 0
   data[] <- lapply(data, function(x) ifelse(is.infinite(x), 0, x))
-  data <- data %>%
-    mutate(
-      DV = ((CurrentAssets - lag(CurrentAssets, default = first(CurrentAssets)))-(CurrentLiabilities - lag(CurrentLiabilities, default = first(CurrentLiabilities)))
-            -(Cash - lag(Cash, default = first(Cash)))-DepreciationAmortization)/lag(Assets, default = first(Assets)),
-      IV1 = 1/lag(Assets, default = first(Assets)),
-      IV2 = ((Revenues - lag(Revenues, default = first(Revenues)))-(AccountsReceivable - lag(AccountsReceivable, default = first(AccountsReceivable))))/lag(Assets, default = first(Assets)),
-      IV3 = PropertyPlantAndEquipment/lag(Assets, default = first(Assets)),
-      IV4 = ROA
-    )
+  Results <- as.data.frame(read.csv("Filtered_Results.csv"))
+  Results$DiscretionaryAccrualsBinary <- NULL
+  common_cols <- intersect(names(data), names(Results))
+  data <- data[, common_cols]
+  
+  
+  # data <- data %>%
+  #   mutate(
+  #     DV = ((CurrentAssets - lag(CurrentAssets, default = first(CurrentAssets)))-(CurrentLiabilities - lag(CurrentLiabilities, default = first(CurrentLiabilities)))
+  #           -(Cash - lag(Cash, default = first(Cash)))-DepreciationAmortization)/lag(Assets, default = first(Assets)),
+  #     IV1 = 1/lag(Assets, default = first(Assets)),
+  #     IV2 = ((Revenues - lag(Revenues, default = first(Revenues)))-(AccountsReceivable - lag(AccountsReceivable, default = first(AccountsReceivable))))/lag(Assets, default = first(Assets)),
+  #     IV3 = PropertyPlantAndEquipment/lag(Assets, default = first(Assets)),
+  #     IV4 = ROA
+  #   )
+  # Results <- as.data.frame(read.csv("Filtered_Results.csv"))
+  # Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
+  # Results$DiscretionaryAccrualsBinary <- factor(Results$DiscretionaryAccrualsBinary, levels = c("1", "0"))
+  # str(Results$DiscretionaryAccrualsBinary)
   # 
   # model <- lm(DV ~ IV1+IV2+IV3+IV4, data= data)
   # data$DiscretionaryAccruals <- resid(model)
@@ -1167,7 +1174,13 @@ FeatureCalculation <- function(data) {
   return(data)
 }
 
+Results <- as.data.frame(read.csv("Filtered_Results.csv"))
 
+
+Apple <- getData("AAPL", 2021)
+CleanApple <- cleanData(Apple)
+FeatureApple <- FeatureCalculation(CleanApple)
+ 
 #Set UI
 ui <- fluidPage(
   titlePanel("Data Access"),
@@ -1197,63 +1210,7 @@ server <- function(input, output) {
     # Show the progress bar
     withProgress(message = 'Retrieving data...', value = 0, {
       # Increment the progress bar value
-      setProgress(0.5)
-      
-      # Simulate data retrieval process
-      Sys.sleep(2)  # Simulating delay, replace with actual data retrieval code
-      
-      # Call the getData function to retrieve the data
-      data <- getData(ticker, year)
-      
-      # Increment the progress bar value
-      setProgress(1)
-      
-      # Update the message based on the retrieved data
-      if (!is.null(data)) {
-        message <- "Data successfully retrieved.\n"
-        
-        # Perform data cleaning operations
-        cleanedData <- cleanData(data)  # Call the cleanData function
-        
-        # Update the message based on the cleaned data
-        if (ncol(cleanedData) > 0L) {
-          message <- paste(message, "Data is successfully cleaned.")
-        } else {
-          message <- paste(message, "Data cleaning failed.")
-        }
-      } else {
-        message <- "Data retrieval failed."
-      }
-      
-      # Display the message
-      output$message <- renderText({
-        message  # Use renderText to render the text
-      })
-      
-      # Display the cleaned data
-      output$cleanedData <- renderTable({
-        cleanedData  # Use renderTable to render the data as a table
-      })
-    })
-  })
-}
-
-
-
-
-
-server <- function(input, output) {
-  cleanedData <- reactiveVal(NULL)  # Store the cleaned data
-  
-  # Event handler for the "OK" button click
-  observeEvent(input$getData, {
-    ticker <- input$ticker
-    year <- input$year
-    
-    # Show the progress bar
-    withProgress(message = 'Retrieving and cleaning data...', value = 0, {
-      # Increment the progress bar value
-      setProgress(0.5)
+      setProgress(0.3)
       
       # Simulate data retrieval process
       Sys.sleep(2)  # Simulating delay, replace with actual data retrieval code
@@ -1262,43 +1219,52 @@ server <- function(input, output) {
       data <- getData(ticker, year)
       
       # Increment the progress bar value
-      setProgress(0.75)  # Updated value to accommodate the additional process
+      setProgress(0.6)  # Updated value to accommodate the additional process
       
       # Call the getData function to retrieve the data for the year before
       data_previous_year <- getData(ticker, year - 1)
       
       # Increment the progress bar value
-      setProgress(1)
+      setProgress(0.9)
       
       # Update the message based on the retrieved data
       if (!is.null(data) && !is.null(data_previous_year)) {
-        message <- paste("Data successfully retrieved for", year, "and", year - 1, ".\n")
-        
-        # Perform data cleaning operations for the inputted year
-        cleanedData_year <- cleanData(data)  # Call the cleanData function
-        
-        # Perform data cleaning operations for the year before
-        cleanedData_previous_year <- cleanData(data_previous_year)  # Call the cleanData function
-        
-        # Combine the cleaned data for both years using rbind
-        cleanedData_combined <- rbind(cleanedData_year, cleanedData_previous_year)
-        
-        # Perform calculations on the combined cleaned data
-        cleanedData_calculated <- FeatureCalculation(cleanedData_combined)
-        cleanedData(cleanedData_calculated)  # Set the cleaned data as a reactive value
-        
-        # Update the message based on the cleaned data
-        if (ncol(cleanedData_calculated) > 0L) {
-          message <- paste(message, "Data is successfully cleaned and calculated for both years.")
-        } else {
-          message <- paste(message, "Data cleaning and calculation failed.")
-        }
+        message <- paste("Data is successfully retrieved for", year, "and", year - 1, ".")
       } else {
         message <- "Data retrieval failed."
       }
       
-      # Display the message
-      output$message <- renderText({
+      # Display the message after data retrieval
+      output$message_retrieval <- renderText({
+        message  # Use renderText to render the text
+      })
+      
+      # Perform data cleaning operations for the inputted year
+      cleanedData_year <- cleanData(data)  # Call the cleanData function
+      
+      # Perform data cleaning operations for the year before
+      cleanedData_previous_year <- cleanData(data_previous_year)  # Call the cleanData function
+      
+      # Combine the cleaned data for both years using rbind
+      cleanedData_combined <- rbind(cleanedData_year, cleanedData_previous_year)
+      
+      # Update the message after data cleaning
+      message <- paste(message, "\nData is successfully cleaned for both years.")
+      
+      # Display the message after data cleaning
+      output$message_cleaning <- renderText({
+        message  # Use renderText to render the text
+      })
+      
+      # Perform calculations on the combined cleaned data
+      cleanedData_calculated <- FeatureCalculation(cleanedData_combined)
+      cleanedData(cleanedData_calculated)  # Set the cleaned data as a reactive value
+      
+      # Update the message after feature calculation
+      message <- paste(message, "\nFeatures are successfully calculated.")
+      
+      # Display the message after feature calculation
+      output$message_calculation <- renderText({
         message  # Use renderText to render the text
       })
       
