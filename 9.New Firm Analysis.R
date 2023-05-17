@@ -1094,18 +1094,81 @@ cleanData <- function(data) {
                            "PropertyPlantAndEquipment","FixedAssets","Interest", 
                            "PreTaxIncome", "Cash", "CashFlowOperations")
   data <- data[data$desc %in% InterestedVariables,]
-  
-  data <- pivot_wider(data, names_from = desc, values_from = val, values_fill = NA, id_cols = c("symbol", "fy", "FY_symbol"))
+  data <- pivot_wider(data, names_from = desc, values_from = val)
   data$debt <- data$Assets- data$Equity
   data$EBITDA <- data$PreTaxIncome +data$DepreciationAmortization
   data$FixedAssets <- ifelse(is.na(data$FixedAssets),data$Assets- data$CurrentAssets, data$FixedAssets )
   data$CurrentAssets <- ifelse(is.na(data$CurrentAssets),data$Assets- data$FixedAssets, data$CurrentAssets )
-  # Return the cleaned data
+  #Return the cleaned data
+  return(data)
+}
+
+FeatureCalculation <- function(data) {
+  data <-data %>% arrange(fy)
+  data$AccountsReceivableTurnover <- data$Revenues/data$AccountsReceivable
+  data$CurrentRatio <- data$CurrentAssets/data$CurrentLiabilities
+  data$DebtToEquity <- data$debt/data$Equity
+  data$ROA <- data$NetIncomeLoss/data$Assets
+  data$ROE <- data$NetIncomeLoss/data$Equity
+  data$DaysSalesinAccountingReceivable <- 360 / (data$Revenues/data$AccountsReceivable)
+  data$DepreciationOverPlant <- data$DepreciationAmortization/data$PropertyPlantAndEquipment
+  data$EquityOverFixedAssets <- data$Equity/data$FixedAssets
+  data$TimesInterestEarned <- data$EBITDA/data$Interest
+  data$SalesToTotalAssets <- data$Revenues/data$Assets
+  data$PreTaxIncomeToSales <- data$PreTaxIncome/data$Revenues
+  data$NetIncomeLossToSales <- data$NetIncomeLoss/data$Revenues
+  data$SalestoCash <- data$Revenues/data$Cash
+  data$SalestoWorkingCapital <- data$Revenues/(data$CurrentAssets-data$CurrentLiabilities)
+  data$SalesToFixedAssets <- data$Revenues/data$FixedAssets
+  data$WorkingCaitalToAssets <- (data$CurrentAssets-data$CurrentLiabilities)/data$Assets
+  data$EBITDAMarginRatio <- data$EBITDA/data$Revenues
+  data$CashFlowOperationsToDebt <- data$CashFlowOperations/data$debt
+  data$NetIncomeLossToCashflow <- data$NetIncomeLoss/data$CashFlowOperations
+  data <- data %>%
+    mutate(
+      ChangeInDepreciation = DepreciationAmortization - lag(DepreciationAmortization, default = first(DepreciationAmortization)),
+      ChangeInAssets = Assets - lag(Assets, default = first(Assets)),
+      ChangeInRevenues = Revenues - lag(Revenues, default = first(Revenues)),
+      ChangeInCurrentRatio = CurrentRatio - lag(CurrentRatio, default = first(CurrentRatio)),
+      ChangeInDebtToEquity = DebtToEquity - lag(DebtToEquity, default = first(DebtToEquity)),
+      ChangeInWorkingCapital = (CurrentAssets-CurrentLiabilities) - lag((CurrentAssets-CurrentLiabilities), default = first((CurrentAssets-CurrentLiabilities))),
+      ChangeInDaysSalesinAccountingReceivable = DaysSalesinAccountingReceivable - lag(DaysSalesinAccountingReceivable, default = first(DaysSalesinAccountingReceivable)),
+      ChangeInDepreciationOverPlant = DepreciationOverPlant - lag(DepreciationOverPlant, default = first(DepreciationOverPlant)),
+      ChangeInEquityOverFixedAssets = EquityOverFixedAssets - lag(EquityOverFixedAssets, default = first(EquityOverFixedAssets)),
+      ChangeInTimesInterestEarned = TimesInterestEarned - lag(TimesInterestEarned, default = first(TimesInterestEarned)),
+      ChangeInSalesToTotalAssets = SalesToTotalAssets - lag(SalesToTotalAssets, default = first(SalesToTotalAssets)),
+      ChangeInPreTaxIncomeToSales = PreTaxIncomeToSales - lag(PreTaxIncomeToSales, default = first(PreTaxIncomeToSales)),
+      ChangeInNetIncomeLossToSales = NetIncomeLossToSales - lag(NetIncomeLossToSales, default = first(NetIncomeLossToSales)),
+      ChangeInSalestoWorkingCapital = SalestoWorkingCapital - lag(SalestoWorkingCapital, default = first(SalestoWorkingCapital)),
+      ChangeInWorkingCaitalToAssets = WorkingCaitalToAssets - lag(WorkingCaitalToAssets, default = first(WorkingCaitalToAssets)),
+      ChangeInEBITDAMarginRatio = EBITDAMarginRatio - lag(EBITDAMarginRatio, default = first(EBITDAMarginRatio)),
+      ChangeInDebt = debt - lag(debt, default = first(debt))
+    )
+  data[, 4:55][is.na(data[, 4:55])] <- 0
+  data[] <- lapply(data, function(x) ifelse(is.infinite(x), 0, x))
+  data <- data %>%
+    mutate(
+      DV = ((CurrentAssets - lag(CurrentAssets, default = first(CurrentAssets)))-(CurrentLiabilities - lag(CurrentLiabilities, default = first(CurrentLiabilities)))
+            -(Cash - lag(Cash, default = first(Cash)))-DepreciationAmortization)/lag(Assets, default = first(Assets)),
+      IV1 = 1/lag(Assets, default = first(Assets)),
+      IV2 = ((Revenues - lag(Revenues, default = first(Revenues)))-(AccountsReceivable - lag(AccountsReceivable, default = first(AccountsReceivable))))/lag(Assets, default = first(Assets)),
+      IV3 = PropertyPlantAndEquipment/lag(Assets, default = first(Assets)),
+      IV4 = ROA
+    )
+  model <- lm(DV ~ IV1+IV2+IV3+IV4, data= data)
+  data$DiscretionaryAccruals <- resid(model)
+  mean <- mean(data$DiscretionaryAccruals)
+  std <- sd(data$DiscretionaryAccruals)
+  
+  # Create the DiscretionaryAccrualsBinary column using ifelse() function
+  data$DiscretionaryAccrualsBinary <- ifelse(data$DiscretionaryAccruals >= mean - std & 
+                                               data$DiscretionaryAccruals <= mean + std, 
+                                                0, 1)
   return(data)
 }
 
 
-#
+
 
 #Set UI
 ui <- fluidPage(
@@ -1181,14 +1244,78 @@ server <- function(input, output) {
 
 
 
+server <- function(input, output) {
+  cleanedData <- reactiveVal(NULL)  # Store the cleaned data
+  
+  # Event handler for the "OK" button click
+  observeEvent(input$getData, {
+    ticker <- input$ticker
+    year <- input$year
+    
+    # Show the progress bar
+    withProgress(message = 'Retrieving and cleaning data...', value = 0, {
+      # Increment the progress bar value
+      setProgress(0.5)
+      
+      # Simulate data retrieval process
+      Sys.sleep(2)  # Simulating delay, replace with actual data retrieval code
+      
+      # Call the getData function to retrieve the data for the inputted year
+      data <- getData(ticker, year)
+      
+      # Increment the progress bar value
+      setProgress(0.75)  # Updated value to accommodate the additional process
+      
+      # Call the getData function to retrieve the data for the year before
+      data_previous_year <- getData(ticker, year - 1)
+      
+      # Increment the progress bar value
+      setProgress(1)
+      
+      # Update the message based on the retrieved data
+      if (!is.null(data) && !is.null(data_previous_year)) {
+        message <- paste("Data successfully retrieved for", year, "and", year - 1, ".\n")
+        
+        # Perform data cleaning operations for the inputted year
+        cleanedData_year <- cleanData(data)  # Call the cleanData function
+        
+        # Perform data cleaning operations for the year before
+        cleanedData_previous_year <- cleanData(data_previous_year)  # Call the cleanData function
+        
+        # Combine the cleaned data for both years using rbind
+        cleanedData_combined <- rbind(cleanedData_year, cleanedData_previous_year)
+        
+        # Perform calculations on the combined cleaned data
+        cleanedData_calculated <- FeatureCalculation(cleanedData_combined)
+        cleanedData(cleanedData_calculated)  # Set the cleaned data as a reactive value
+        
+        # Update the message based on the cleaned data
+        if (ncol(cleanedData_calculated) > 0L) {
+          message <- paste(message, "Data is successfully cleaned and calculated for both years.")
+        } else {
+          message <- paste(message, "Data cleaning and calculation failed.")
+        }
+      } else {
+        message <- "Data retrieval failed."
+      }
+      
+      # Display the message
+      output$message <- renderText({
+        message  # Use renderText to render the text
+      })
+      
+      # Display the cleaned and calculated data for both years
+      output$cleanedData <- renderTable({
+        cleanedData()  # Use renderTable to render the data as a table
+      })
+    })
+  })
+}
+
+
+
 # Run the app
 shinyApp(ui, server)
-
-
-
-
-
-
 
 
 
