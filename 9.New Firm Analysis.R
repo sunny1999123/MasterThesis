@@ -10,6 +10,11 @@ library(dplyr)
 library(XBRL)
 library(tidyr)
 library(ggplot2)
+
+
+
+
+
 #Get CIK symbols per ticker and make a dataframe of it from SEC api
 INFO <- read_json("https://www.sec.gov/files/company_tickers.json")
 INFO <- rbindlist(INFO)
@@ -1099,7 +1104,7 @@ cleanData <- function(data) {
 }
 
 #Calculate Features
-FeatureCalculation <- function(data, ticker, year) {
+FeatureCalculation <- function(data) {
   data <-data %>% arrange(fy)
   data$AccountsReceivableTurnover <- data$Revenues/data$AccountsReceivable
   data$CurrentRatio <- data$CurrentAssets/data$CurrentLiabilities
@@ -1142,15 +1147,26 @@ FeatureCalculation <- function(data, ticker, year) {
     )
   data[, 4:55][is.na(data[, 4:55])] <- 0
   data[] <- lapply(data, function(x) ifelse(is.infinite(x), 0, x))
+  
   Results <- as.data.frame(read.csv("PreWinsorized.csv"))
   common_cols <- intersect(names(data), names(Results))
   Results <- Results[, common_cols]
-  CombinedData <- rbind(data, Results)
+  CombinedData <- rbind(Results, data)
   CombinedData <- CombinedData[!duplicated(CombinedData$FY_symbol), ]
   CombinedData[,20:55] <- scale(CombinedData[,20:55])
-  Data2 <- rbind(data, Results)
-  merged_df <- merge(data, Data2, by = "FY_symbol")
-  UniqueData <- merged_df[-1, ]
+  # FY_symbol <- data$FY_symbol
+  #CombinedData <- CombinedData[CombinedData$FY_symbol == data$FY_symbol, ]
+  # CombinedData <- as.data.frame(matching_row)
+  
+  
+  
+  
+  #merged_data <- merge(data, CombinedData, by = "FY_symbol", all.x = FALSE)
+  #matching_row <- merged_data[1, ]
+  
+  #Data2 <- rbind(data, Results)
+  # merged_df <- merge(data, Data2, by = "FY_symbol")
+  # UniqueData <- merged_df[-1, ]
   
   # normalized_data <- as.data.frame(lapply(data[cols_to_normalize], function(x) (x - mean(x)) / sd(x)))
   # Results$DiscretionaryAccrualsBinary <- NULL
@@ -1164,116 +1180,116 @@ FeatureCalculation <- function(data, ticker, year) {
   # 
   # 
 
-  return(merged_df)
-  #return(CombinedData)
+  return(CombinedData)
+  #return(data)
 }
 
-
+#Combined data has the normalized dataset
 
 Apple <- getData("AAPL", 2021)
 CleanApple <- cleanData(Apple)
 FeatureApple <- FeatureCalculation(CleanApple)
 FeatureApple2 <- FeatureCalculation(CleanApple)
 
-#Set UI
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ui <- fluidPage(
-  titlePanel("Data Access"),
+  titlePanel("Earnings Management Detection"),
   sidebarLayout(
     sidebarPanel(
-      textInput("ticker", "Ticker:", ""),
-      numericInput("year", "Year:", min = 1900, max = 2100, value = NULL),
+      textInput("ticker", "Please Insert Ticker Symbol Here:", ""),
+      numericInput("year", "Please Insert Year Here:", min = 1900, max = 2100, value = NULL),
       actionButton("getData", "OK")
     ),
     mainPanel(
       progress = "progress",
-      verbatimTextOutput("message"),  # Use verbatimTextOutput for displaying text
-      tableOutput("cleanedData")  # Use tableOutput for displaying the cleaned data
+      verbatimTextOutput("message"),
+      tableOutput("cleanedData")
     )
   )
 )
 
-#Set Server
+# Set Server
 server <- function(input, output) {
   cleanedData <- reactiveVal(NULL)  # Store the cleaned data
   
-  # Event handler for the "OK" button click
   observeEvent(input$getData, {
     ticker <- input$ticker
     year <- input$year
     
-    # Show the progress bar
     withProgress(message = 'Retrieving data...', value = 0, {
-      # Increment the progress bar value
       setProgress(0.3)
       
-      # Simulate data retrieval process
-      Sys.sleep(2)  # Simulating delay, replace with actual data retrieval code
+      Sys.sleep(2)
       
-      # Call the getData function to retrieve the data for the inputted year
       data <- getData(ticker, year)
       
-      # Increment the progress bar value
-      setProgress(0.6)  # Updated value to accommodate the additional process
+      setProgress(0.6)
       
-      # Call the getData function to retrieve the data for the year before
       data_previous_year <- getData(ticker, year - 1)
       
-      # Increment the progress bar value
       setProgress(0.9)
       
-      # Update the message based on the retrieved data
       if (!is.null(data) && !is.null(data_previous_year)) {
         message <- paste("Data is successfully retrieved for", year, "and", year - 1, ".")
       } else {
         message <- "Data retrieval failed."
       }
       
-      # Display the message after data retrieval
-      output$message_retrieval <- renderText({
-        message  # Use renderText to render the text
+      output$message <- renderText({
+        message
       })
       
-      # Perform data cleaning operations for the inputted year
-      cleanedData_year <- cleanData(data)  # Call the cleanData function
+      cleanedData_year <- cleanData(data)
+      cleanedData_previous_year <- cleanData(data_previous_year)
       
-      # Perform data cleaning operations for the year before
-      cleanedData_previous_year <- cleanData(data_previous_year)  # Call the cleanData function
-      
-      # Combine the cleaned data for both years using rbind
       cleanedData_combined <- rbind(cleanedData_year, cleanedData_previous_year)
+      cleanedData(cleanedData_combined)
+      message <- paste(message, "\n Data is successfully cleaned for both years.")
       
-      # Update the message after data cleaning
-      message <- paste(message, "\nData is successfully cleaned for both years.")
-      
-      # Display the message after data cleaning
-      output$message_cleaning <- renderText({
-        message  # Use renderText to render the text
+      output$message <- renderText({
+        message
       })
       
-      # Perform calculations on the combined cleaned data
-      cleanedData_calculated <- FeatureCalculation(cleanedData_combined)
-      cleanedData(cleanedData_calculated)  # Set the cleaned data as a reactive value
-      
-      # Update the message after feature calculation
-      message <- paste(message, "\nFeatures are successfully calculated.")
-      
-      # Display the message after feature calculation
-      output$message_calculation <- renderText({
-        message  # Use renderText to render the text
+      # cleanedData_calculated <- FeatureCalculation(cleanedData_combined)
+      # cleanedData(cleanedData_calculated)
+      # 
+      # message <- paste(message, "\n Features are successfully calculated.")
+      # 
+      output$message <- renderText({
+        message
       })
       
-      # Display the cleaned and calculated data for both years
       output$cleanedData <- renderTable({
-        cleanedData()  # Use renderTable to render the data as a table
+        cleanedData()
       })
     })
   })
 }
 
-
-
-# Run the app
+# Run the Shiny app
 shinyApp(ui, server)
+
 
 
 
