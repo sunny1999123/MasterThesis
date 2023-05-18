@@ -1099,7 +1099,7 @@ cleanData <- function(data) {
 }
 
 #Calculate Features
-FeatureCalculation <- function(data) {
+FeatureCalculation <- function(data, ticker, year) {
   data <-data %>% arrange(fy)
   data$AccountsReceivableTurnover <- data$Revenues/data$AccountsReceivable
   data$CurrentRatio <- data$CurrentAssets/data$CurrentLiabilities
@@ -1142,45 +1142,39 @@ FeatureCalculation <- function(data) {
     )
   data[, 4:55][is.na(data[, 4:55])] <- 0
   data[] <- lapply(data, function(x) ifelse(is.infinite(x), 0, x))
-  Results <- as.data.frame(read.csv("Filtered_Results.csv"))
-  Results$DiscretionaryAccrualsBinary <- NULL
+  Results <- as.data.frame(read.csv("PreWinsorized.csv"))
   common_cols <- intersect(names(data), names(Results))
-  data <- data[, common_cols]
+  Results <- Results[, common_cols]
+  CombinedData <- rbind(data, Results)
+  CombinedData <- CombinedData[!duplicated(CombinedData$FY_symbol), ]
+  CombinedData[,20:55] <- scale(CombinedData[,20:55])
+  Data2 <- rbind(data, Results)
+  merged_df <- merge(data, Data2, by = "FY_symbol")
+  UniqueData <- merged_df[-1, ]
   
-  
-  # data <- data %>%
-  #   mutate(
-  #     DV = ((CurrentAssets - lag(CurrentAssets, default = first(CurrentAssets)))-(CurrentLiabilities - lag(CurrentLiabilities, default = first(CurrentLiabilities)))
-  #           -(Cash - lag(Cash, default = first(Cash)))-DepreciationAmortization)/lag(Assets, default = first(Assets)),
-  #     IV1 = 1/lag(Assets, default = first(Assets)),
-  #     IV2 = ((Revenues - lag(Revenues, default = first(Revenues)))-(AccountsReceivable - lag(AccountsReceivable, default = first(AccountsReceivable))))/lag(Assets, default = first(Assets)),
-  #     IV3 = PropertyPlantAndEquipment/lag(Assets, default = first(Assets)),
-  #     IV4 = ROA
-  #   )
-  # Results <- as.data.frame(read.csv("Filtered_Results.csv"))
-  # Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
-  # Results$DiscretionaryAccrualsBinary <- factor(Results$DiscretionaryAccrualsBinary, levels = c("1", "0"))
-  # str(Results$DiscretionaryAccrualsBinary)
+  # normalized_data <- as.data.frame(lapply(data[cols_to_normalize], function(x) (x - mean(x)) / sd(x)))
+  # Results$DiscretionaryAccrualsBinary <- NULL
+  # common_cols <- intersect(names(data), names(Results))
+  # data <- data[, common_cols]
+  # normalized_extra_row <- as.data.frame(lapply(data, function(x) (x - means) / sds))
+  # names(normalized_extra_row) <- names(normalized_data)
+  # normalized_data_with_extra_row <- rbind(normalized_data, normalized_extra_row)
+  # data <-normalized_data_with_extra_row
   # 
-  # model <- lm(DV ~ IV1+IV2+IV3+IV4, data= data)
-  # data$DiscretionaryAccruals <- resid(model)
-  # mean <- mean(data$DiscretionaryAccruals)
-  # std <- sd(data$DiscretionaryAccruals)
   # 
-  # # Create the DiscretionaryAccrualsBinary column using ifelse() function
-  # data$DiscretionaryAccrualsBinary <- ifelse(data$DiscretionaryAccruals >= mean - std & 
-  #                                              data$DiscretionaryAccruals <= mean + std, 
-  #                                               0, 1)
-  return(data)
+  # 
+
+  return(merged_df)
+  #return(CombinedData)
 }
 
-Results <- as.data.frame(read.csv("Filtered_Results.csv"))
 
 
 Apple <- getData("AAPL", 2021)
 CleanApple <- cleanData(Apple)
 FeatureApple <- FeatureCalculation(CleanApple)
- 
+FeatureApple2 <- FeatureCalculation(CleanApple)
+
 #Set UI
 ui <- fluidPage(
   titlePanel("Data Access"),
