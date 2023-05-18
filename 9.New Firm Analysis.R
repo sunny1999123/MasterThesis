@@ -1207,42 +1207,14 @@ RandomForestPrediction <- function(data, originaldata) {
   rf_model <- ranger(DiscretionaryAccrualsBinary ~ ., data = originaldata, probability = TRUE)
   predictions <- predict(rf_model, data = data)
   aggregated_prediction <- ifelse(predictions$predictions[, "1"] > predictions$predictions[, "0"], "Extreme EM", "Moderate EM")
-  return(predictions)
+  return(aggregated_prediction)
 }
-
-
-
-
-
 
 
 Apple <- getData("AAPL", 2021)
 CleanApple <- cleanData(Apple)
 FeatureApple <- FeatureCalculation(CleanApple, "AAPL", 2021)
 RFprediction <-RandomForestPrediction(FeatureApple,originaldata)
-str(RFprediction)
-
-
-
-AA <- getData("A", 2020)
-CleanA <- cleanData(AA)
-FeatureA <- FeatureCalculation(CleanA, "A", 2020)
-RFpredictionA <-RandomForestPrediction(FeatureA,originaldata)
-str(RFpredictionA)
-
-
-
-
-GE <- getData("GE", 2022)
-CleanGE <- cleanData(GE)
-FeatureGE <- FeatureCalculation(CleanGE, "GE", 2022)
-RFpredictionGE <-RandomForestPrediction(FeatureGE,originaldata)
-str(RFpredictionA)
-
-# CCL <- getData("CCL", 2021)
-# CleanCCL <- cleanData(CCL)
-# FeatureCCL <- FeatureCalculation(CleanCCL, "CCL", 2021)
-# RFpredictionccl <-RandomForestPrediction(FeatureCCL,originaldata)
 
 
 
@@ -1350,8 +1322,6 @@ server <- function(input, output) {
     })
   })
 }
-
-
 
 
 
