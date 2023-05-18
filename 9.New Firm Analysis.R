@@ -3,6 +3,7 @@ library(data.table)
 library(httr)
 library(jsonlite)
 library(stringr)
+library(workflows)
 library(dplyr)
 library(data.table)
 library(shinyWidgets)
@@ -12,7 +13,11 @@ library(tidyr)
 library(ggplot2)
 library(ranger)
 library(xgboost)
-
+library(recipes)
+library(caret)
+library(themis)
+library(tidymodels)
+library(parsnip)
 originaldata <- read.csv("Filtered_Results.csv")
 
 
@@ -1202,33 +1207,12 @@ RandomForestPrediction <- function(data, originaldata) {
   rf_model <- ranger(DiscretionaryAccrualsBinary ~ ., data = originaldata, probability = TRUE)
   predictions <- predict(rf_model, data = data)
   aggregated_prediction <- ifelse(predictions$predictions[, "1"] > predictions$predictions[, "0"], "Extreme EM", "Moderate EM")
-  return(aggregated_prediction)
+  return(predictions)
 }
 
 
 
-GradientBoostingPrediction <- function(data, originaldata) {
-  originaldata <- read.csv("Filtered_Results.csv")
-  common_cols <- intersect(names(data), names(originaldata))
-  data <- data[, common_cols]
-  originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
-  originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
-  
-  # Train the gradient boosting model
-  xgb_model <- xgboost(data = as.matrix(originaldata[, -which(names(originaldata) == "DiscretionaryAccrualsBinary")]),
-                       label = originaldata$DiscretionaryAccrualsBinary,
-                       objective = "binary:logistic",
-                       nrounds = 100)
-  
-  # Predict using the gradient boosting model
-  predictions <- predict(xgb_model, newdata = as.matrix(data))
-  
-  # Convert the predictions to "Extreme EM" or "Moderate EM" based on threshold
-  threshold <- 0.5
-  aggregated_prediction <- ifelse(predictions > threshold, "Extreme EM", "Moderate EM")
-  
-  return(aggregated_prediction)
-}
+
 
 
 
@@ -1236,26 +1220,29 @@ Apple <- getData("AAPL", 2021)
 CleanApple <- cleanData(Apple)
 FeatureApple <- FeatureCalculation(CleanApple, "AAPL", 2021)
 RFprediction <-RandomForestPrediction(FeatureApple,originaldata)
-GradientBoostingPrediction <- RandomForestPrediction(FeatureApple,originaldata)
 str(RFprediction)
 
 
-CCL <- getData("CCL", 2021)
-CleanCCL <- cleanData(CCL)
-FeatureCCL <- FeatureCalculation(CleanCCL, "CCL", 2021)
-RFpredictionccl <-RandomForestPrediction(FeatureCCL,originaldata)
+
+AA <- getData("A", 2020)
+CleanA <- cleanData(AA)
+FeatureA <- FeatureCalculation(CleanA, "A", 2020)
+RFpredictionA <-RandomForestPrediction(FeatureA,originaldata)
+str(RFpredictionA)
 
 
 
 
+GE <- getData("GE", 2022)
+CleanGE <- cleanData(GE)
+FeatureGE <- FeatureCalculation(CleanGE, "GE", 2022)
+RFpredictionGE <-RandomForestPrediction(FeatureGE,originaldata)
+str(RFpredictionA)
 
-
-
-
-
-
-
-
+# CCL <- getData("CCL", 2021)
+# CleanCCL <- cleanData(CCL)
+# FeatureCCL <- FeatureCalculation(CleanCCL, "CCL", 2021)
+# RFpredictionccl <-RandomForestPrediction(FeatureCCL,originaldata)
 
 
 
@@ -1270,14 +1257,17 @@ ui <- fluidPage(
     mainPanel(
       progress = "progress",
       verbatimTextOutput("message"),
-      tableOutput("cleanedData")
+      tableOutput("cleanedData"),
+      textOutput("result_rf")  # Added output for the random forest prediction result
     )
   )
 )
 
-# Set Server
+
+
 server <- function(input, output) {
   cleanedData <- reactiveVal(NULL)  # Store the cleaned data
+  originaldata <- reactiveVal(NULL)  # Store the original data
   
   observeEvent(input$getData, {
     ticker <- input$ticker
@@ -1331,78 +1321,9 @@ server <- function(input, output) {
           } else {
             cleanedData(cleanedData_calculated)
             message <- paste(message, "\n Features are successfully calculated.")
-          }
-        }
-      }
-      
-      output$message <- renderText({
-        message
-      })
-      
-      output$cleanedData <- renderTable({
-        cleanedData()
-      })
-    })
-  })
-}
-
-
-
-server <- function(input, output) {
-  cleanedData <- reactiveVal(NULL)  # Store the cleaned data
-  
-  observeEvent(input$getData, {
-    ticker <- input$ticker
-    year <- input$year
-    
-    withProgress(message = 'Retrieving data...', value = 0, {
-      setProgress(0.3)
-      
-      Sys.sleep(2)
-      
-      data <- getData(ticker, year)
-      
-      setProgress(0.6)
-      
-      data_previous_year <- getData(ticker, year - 1)
-      
-      setProgress(0.9)
-      
-      if (!is.null(data) && !is.null(data_previous_year)) {
-        message <- paste("Data is successfully retrieved for", year, "and", year - 1, ".")
-      } else {
-        message <- "Problem with data retrieval."
-        showNotification(message, type = "error")
-      }
-      
-      output$message <- renderText({
-        message
-      })
-      
-      if (is.null(data) || is.null(data_previous_year)) {
-        cleanedData(NULL)  # Set cleanedData to NULL
-      } else {
-        cleanedData_year <- cleanData(data)
-        cleanedData_previous_year <- cleanData(data_previous_year)
-        
-        cleanedData_combined <- rbind(cleanedData_year, cleanedData_previous_year)
-        
-        if (anyNA(cleanedData_combined)) {
-          message <- "Data is not successfully cleaned. Missing values exist."
-          showNotification(message, type = "error")
-          cleanedData(NULL)  # Set cleanedData to NULL
-        } else {
-          message <- paste(message, "\n Data is successfully cleaned for both years.")
-          
-          cleanedData_calculated <- FeatureCalculation(cleanedData_combined, input$ticker, year)
-          
-          if (is.null(cleanedData_calculated)) {
-            message <- "Problem with feature calculation."
-            showNotification(message, type = "error")
-            cleanedData(NULL)  # Set cleanedData to NULL
-          } else {
-            cleanedData(cleanedData_calculated)
-            message <- paste(message, "\n Features are successfully calculated.")
+            
+            # Set the original data
+            originaldata(data)
           }
         }
       }
@@ -1416,21 +1337,25 @@ server <- function(input, output) {
       })
       
       if (!is.null(cleanedData())) {
-        predictions <- RandomForestPrediction(cleanedData(), originaldata)
-        output$prediction <- renderText({
-          predictions
+        # Random Forest prediction
+        predictions_rf <- RandomForestPrediction(cleanedData(), originaldata())
+        
+        output$prediction_rf <- renderText({
+          predictions_rf
+        })
+        output$result_rf <- renderText({
+          paste("Random Forest Prediction:", predictions_rf)
         })
       }
     })
   })
 }
 
-# Run the Shiny app
+
+
+
+
 shinyApp(ui, server)
-
-
-
-
 
 
 
