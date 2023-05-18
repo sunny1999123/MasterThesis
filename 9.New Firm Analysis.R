@@ -10,9 +10,10 @@ library(dplyr)
 library(XBRL)
 library(tidyr)
 library(ggplot2)
+library(ranger)
+library(xgboost)
 
-
-
+originaldata <- read.csv("Filtered_Results.csv")
 
 
 #Get CIK symbols per ticker and make a dataframe of it from SEC api
@@ -1091,20 +1092,26 @@ cleanData <- function(data) {
     select(-Res_index)
   InterestedVariables <- c("Revenues","AccountsReceivable", "CurrentAssets","CurrentLiabilities",
                            "Debt","Equity", "NetIncomeLoss", "Assets", "DepreciationAmortization",
-                           "PropertyPlantAndEquipment","FixedAssets","Interest", 
+                           "PropertyPlantAndEquipment","FixedAssets","Interest",
                            "PreTaxIncome", "Cash", "CashFlowOperations")
   data <- data[data$desc %in% InterestedVariables,]
-  data <- pivot_wider(data, names_from = desc, values_from = val)
+  data <- pivot_wider(data, names_from = desc, values_from = val, values_fill = NA, id_cols = c("symbol", "fy", "FY_symbol"))
   data$debt <- data$Assets- data$Equity
   data$EBITDA <- data$PreTaxIncome +data$DepreciationAmortization
-  data$FixedAssets <- ifelse(is.na(data$FixedAssets),data$Assets- data$CurrentAssets, data$FixedAssets )
-  data$CurrentAssets <- ifelse(is.na(data$CurrentAssets),data$Assets- data$FixedAssets, data$CurrentAssets )
-  #Return the cleaned data
+  if (!exists("FixedAssets", where = data) || is.na(data$FixedAssets)) {
+    data$FixedAssets <- data$Assets - data$CurrentAssets
+  }
+  if (!exists("CurrentAssets", where = data) || is.na(data$CurrentAssets)) {
+    data$CurrentAssets <- data$Assets - data$CurrentAssets
+  }
+  
+  # data$CurrentAssets <- ifelse(is.na(data$CurrentAssets),data$Assets- data$FixedAssets, data$CurrentAssets )
+  # #Return the cleaned data
   return(data)
 }
 
 #Calculate Features
-FeatureCalculation <- function(data) {
+FeatureCalculation <- function(data, ticker, year) {
   data <-data %>% arrange(fy)
   data$AccountsReceivableTurnover <- data$Revenues/data$AccountsReceivable
   data$CurrentRatio <- data$CurrentAssets/data$CurrentLiabilities
@@ -1156,9 +1163,8 @@ FeatureCalculation <- function(data) {
   CombinedData[,20:55] <- scale(CombinedData[,20:55])
   # FY_symbol <- data$FY_symbol
   #CombinedData <- CombinedData[CombinedData$FY_symbol == data$FY_symbol, ]
-  # CombinedData <- as.data.frame(matching_row)
-  
-  
+  CombinedData <- as.data.frame(CombinedData)
+  filtered_data <- CombinedData[CombinedData$symbol == ticker & CombinedData$fy == year, ]
   
   
   #merged_data <- merge(data, CombinedData, by = "FY_symbol", all.x = FALSE)
@@ -1180,24 +1186,64 @@ FeatureCalculation <- function(data) {
   # 
   # 
 
-  return(CombinedData)
+  return(filtered_data)
   #return(data)
 }
 
-#Combined data has the normalized dataset
+
+
+#Random forest prediction
+RandomForestPrediction <- function(data, originaldata) {
+  originaldata <- read.csv("Filtered_Results.csv")
+  common_cols <- intersect(names(data), names(originaldata))
+  data <- data[, common_cols]
+  originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
+  originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
+  rf_model <- ranger(DiscretionaryAccrualsBinary ~ ., data = originaldata, probability = TRUE)
+  predictions <- predict(rf_model, data = data)
+  aggregated_prediction <- ifelse(predictions$predictions[, "1"] > predictions$predictions[, "0"], "Extreme EM", "Moderate EM")
+  return(aggregated_prediction)
+}
+
+
+
+GradientBoostingPrediction <- function(data, originaldata) {
+  originaldata <- read.csv("Filtered_Results.csv")
+  common_cols <- intersect(names(data), names(originaldata))
+  data <- data[, common_cols]
+  originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
+  originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
+  
+  # Train the gradient boosting model
+  xgb_model <- xgboost(data = as.matrix(originaldata[, -which(names(originaldata) == "DiscretionaryAccrualsBinary")]),
+                       label = originaldata$DiscretionaryAccrualsBinary,
+                       objective = "binary:logistic",
+                       nrounds = 100)
+  
+  # Predict using the gradient boosting model
+  predictions <- predict(xgb_model, newdata = as.matrix(data))
+  
+  # Convert the predictions to "Extreme EM" or "Moderate EM" based on threshold
+  threshold <- 0.5
+  aggregated_prediction <- ifelse(predictions > threshold, "Extreme EM", "Moderate EM")
+  
+  return(aggregated_prediction)
+}
+
+
 
 Apple <- getData("AAPL", 2021)
 CleanApple <- cleanData(Apple)
-FeatureApple <- FeatureCalculation(CleanApple)
-FeatureApple2 <- FeatureCalculation(CleanApple)
+FeatureApple <- FeatureCalculation(CleanApple, "AAPL", 2021)
+RFprediction <-RandomForestPrediction(FeatureApple,originaldata)
+GradientBoostingPrediction <- RandomForestPrediction(FeatureApple,originaldata)
+str(RFprediction)
 
 
-
-
-
-
-
-
+CCL <- getData("CCL", 2021)
+CleanCCL <- cleanData(CCL)
+FeatureCCL <- FeatureCalculation(CleanCCL, "CCL", 2021)
+RFpredictionccl <-RandomForestPrediction(FeatureCCL,originaldata)
 
 
 
@@ -1253,29 +1299,42 @@ server <- function(input, output) {
       if (!is.null(data) && !is.null(data_previous_year)) {
         message <- paste("Data is successfully retrieved for", year, "and", year - 1, ".")
       } else {
-        message <- "Data retrieval failed."
+        message <- "Problem with data retrieval."
+        showNotification(message, type = "error")
       }
       
       output$message <- renderText({
         message
       })
       
-      cleanedData_year <- cleanData(data)
-      cleanedData_previous_year <- cleanData(data_previous_year)
+      if (is.null(data) || is.null(data_previous_year)) {
+        cleanedData(NULL)  # Set cleanedData to NULL
+      } else {
+        cleanedData_year <- cleanData(data)
+        cleanedData_previous_year <- cleanData(data_previous_year)
+        
+        cleanedData_combined <- rbind(cleanedData_year, cleanedData_previous_year)
+        
+        if (anyNA(cleanedData_combined)) {
+          message <- "Data is not successfully cleaned. Missing values exist."
+          showNotification(message, type = "error")
+          cleanedData(NULL)  # Set cleanedData to NULL
+        } else {
+          message <- paste(message, "\n Data is successfully cleaned for both years.")
+          
+          cleanedData_calculated <- FeatureCalculation(cleanedData_combined, input$ticker, year)
+          
+          if (is.null(cleanedData_calculated)) {
+            message <- "Problem with feature calculation."
+            showNotification(message, type = "error")
+            cleanedData(NULL)  # Set cleanedData to NULL
+          } else {
+            cleanedData(cleanedData_calculated)
+            message <- paste(message, "\n Features are successfully calculated.")
+          }
+        }
+      }
       
-      cleanedData_combined <- rbind(cleanedData_year, cleanedData_previous_year)
-      cleanedData(cleanedData_combined)
-      message <- paste(message, "\n Data is successfully cleaned for both years.")
-      
-      output$message <- renderText({
-        message
-      })
-      
-      # cleanedData_calculated <- FeatureCalculation(cleanedData_combined)
-      # cleanedData(cleanedData_calculated)
-      # 
-      # message <- paste(message, "\n Features are successfully calculated.")
-      # 
       output$message <- renderText({
         message
       })
@@ -1283,6 +1342,85 @@ server <- function(input, output) {
       output$cleanedData <- renderTable({
         cleanedData()
       })
+    })
+  })
+}
+
+
+
+server <- function(input, output) {
+  cleanedData <- reactiveVal(NULL)  # Store the cleaned data
+  
+  observeEvent(input$getData, {
+    ticker <- input$ticker
+    year <- input$year
+    
+    withProgress(message = 'Retrieving data...', value = 0, {
+      setProgress(0.3)
+      
+      Sys.sleep(2)
+      
+      data <- getData(ticker, year)
+      
+      setProgress(0.6)
+      
+      data_previous_year <- getData(ticker, year - 1)
+      
+      setProgress(0.9)
+      
+      if (!is.null(data) && !is.null(data_previous_year)) {
+        message <- paste("Data is successfully retrieved for", year, "and", year - 1, ".")
+      } else {
+        message <- "Problem with data retrieval."
+        showNotification(message, type = "error")
+      }
+      
+      output$message <- renderText({
+        message
+      })
+      
+      if (is.null(data) || is.null(data_previous_year)) {
+        cleanedData(NULL)  # Set cleanedData to NULL
+      } else {
+        cleanedData_year <- cleanData(data)
+        cleanedData_previous_year <- cleanData(data_previous_year)
+        
+        cleanedData_combined <- rbind(cleanedData_year, cleanedData_previous_year)
+        
+        if (anyNA(cleanedData_combined)) {
+          message <- "Data is not successfully cleaned. Missing values exist."
+          showNotification(message, type = "error")
+          cleanedData(NULL)  # Set cleanedData to NULL
+        } else {
+          message <- paste(message, "\n Data is successfully cleaned for both years.")
+          
+          cleanedData_calculated <- FeatureCalculation(cleanedData_combined, input$ticker, year)
+          
+          if (is.null(cleanedData_calculated)) {
+            message <- "Problem with feature calculation."
+            showNotification(message, type = "error")
+            cleanedData(NULL)  # Set cleanedData to NULL
+          } else {
+            cleanedData(cleanedData_calculated)
+            message <- paste(message, "\n Features are successfully calculated.")
+          }
+        }
+      }
+      
+      output$message <- renderText({
+        message
+      })
+      
+      output$cleanedData <- renderTable({
+        cleanedData()
+      })
+      
+      if (!is.null(cleanedData())) {
+        predictions <- RandomForestPrediction(cleanedData(), originaldata)
+        output$prediction <- renderText({
+          predictions
+        })
+      }
     })
   })
 }
