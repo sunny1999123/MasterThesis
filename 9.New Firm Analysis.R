@@ -1217,8 +1217,9 @@ RandomForestPrediction <- function(data, originaldata) {
    
     rf_wf_fit <- fit(rf_wf, data = originaldata)
     predictions <- predict(rf_wf_fit, new_data = data)
+    labels <- ifelse(predictions == 0, "Moderate Proxy for Earnings Management", "Extreme Proxy for Earnings Management")
     
-  return(predictions)
+  return(labels)
 }
 
 
@@ -1249,9 +1250,10 @@ GradientBoostingPrediction <- function(data, originaldata) {
   
   XGB_wf_fit <- fit(XGB_wf, data = originaldata)
   predictions <- predict(XGB_wf_fit, new_data = data)
-  
-  return(predictions)
+  labels <- ifelse(predictions == 0, "Moderate Proxy for Earnings Management", "Extreme Proxy for Earnings Management")
+  return(labels)
 }
+
 
 
 SupportVectorPrediction <- function(data, originaldata) {
@@ -1280,8 +1282,9 @@ SupportVectorPrediction <- function(data, originaldata) {
   
   SVM_wf_fit <- fit(SVM_wf, data = originaldata)
   predictions <- predict(SVM_wf_fit, new_data = data)
+  labels <- ifelse(predictions == 0, "Moderate Proxy for Earnings Management", "Extreme Proxy for Earnings Management")
   
-  return(predictions)
+  return(labels)
 }
 
 
@@ -1309,10 +1312,14 @@ ui <- fluidPage(
     mainPanel(
       progress = "progress",
       verbatimTextOutput("message"),
+      textOutput("financial_info_text"),
       tableOutput("cleanedData"),
       textOutput("result_rf") ,
       textOutput("result_xgb"),
-      textOutput("result_SVM")
+      textOutput("result_SVM"),
+      br(),
+      htmlOutput("overall_prediction")
+      
       
       # Added output for the random forest prediction result
     )
@@ -1376,7 +1383,7 @@ server <- function(input, output) {
             cleanedData(NULL)  # Set cleanedData to NULL
           } else {
             cleanedData(cleanedData_calculated)
-            message <- paste(message, "\n Features are successfully calculated.")
+            message <- paste(message, "\nFeatures are successfully calculated.")
             
             # Set the original data
             originaldata(data)
@@ -1389,8 +1396,15 @@ server <- function(input, output) {
       })
       
       output$cleanedData <- renderTable({
-        cleanedData()
+        if (!is.null(cleanedData())) {
+          cleanedData() %>%
+            dplyr::select(-1:-3)  # Exclude first three columns
+        }
       })
+      output$financial_info_text <- renderText({
+        paste("Financial information of", ticker)
+      })
+      
       
       if (!is.null(cleanedData())) {
         # Random Forest prediction
@@ -1404,7 +1418,7 @@ server <- function(input, output) {
         })
       }
       if (!is.null(cleanedData())) {
-        # Random Forest prediction
+        # Boosting prediction
         predictions_xgb <- GradientBoostingPrediction(cleanedData(), originaldata())
         
         output$predictions_xgb <- renderText({
@@ -1425,6 +1439,20 @@ server <- function(input, output) {
           paste("Support Vector Machine Prediction:", predictions_SVM)
         })
       }
+      moderate_count <- sum(grepl("Moderate", predictions_rf)) +
+        sum(grepl("Moderate", predictions_xgb)) +
+        sum(grepl("Moderate", predictions_SVM))
+      
+      extreme_count <- sum(grepl("Extreme", predictions_rf)) +
+        sum(grepl("Extreme", predictions_xgb)) +
+        sum(grepl("Extreme", predictions_SVM))
+      
+      overall_prediction <- ifelse(moderate_count >= 2, "Moderately", "Extremely")
+      
+      output$overall_prediction <- renderText({
+        prediction <- paste("Based on the Machine Learning models, the overall prediction is that the firm with ticker symbol", ticker, "in the year", year, "had a", overall_prediction, "Upwards/Downwards Proxy for Earnings Management. This means that the firm likely", ifelse(overall_prediction == "Moderately", "did not engage", "engaged"), "in Earnings Management, based on the Machine Learning models.")
+        HTML(paste("<span style='font-weight: bold;'>", prediction, "</span>"))
+      })
     })
   })
 }
@@ -1434,23 +1462,6 @@ server <- function(input, output) {
 shinyApp(ui, server)
 
 
-
-
-#merged_data <- merge(data, CombinedData, by = "FY_symbol", all.x = FALSE)
-#matching_row <- merged_data[1, ]
-
-#Data2 <- rbind(data, Results)
-# merged_df <- merge(data, Data2, by = "FY_symbol")
-# UniqueData <- merged_df[-1, ]
-
-# normalized_data <- as.data.frame(lapply(data[cols_to_normalize], function(x) (x - mean(x)) / sd(x)))
-# Results$DiscretionaryAccrualsBinary <- NULL
-# common_cols <- intersect(names(data), names(Results))
-# data <- data[, common_cols]
-# normalized_extra_row <- as.data.frame(lapply(data, function(x) (x - means) / sds))
-# names(normalized_extra_row) <- names(normalized_data)
-# normalized_data_with_extra_row <- rbind(normalized_data, normalized_extra_row)
-# data <-normalized_data_with_extra_row
 
 
 
