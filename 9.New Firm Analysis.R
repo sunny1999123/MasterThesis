@@ -1291,14 +1291,14 @@ SupportVectorPrediction <- function(data, originaldata) {
 
 
 
-
-A <- getData("A", 2020)
-CleanA <- cleanData(A)
-FeatureA <- FeatureCalculation(CleanA, "A", 2020)
-APrediction <-RandomForestPrediction(FeatureA,originaldata)
-APredictionBoosting <-GradientBoostingPrediction(FeatureA,originaldata)
-APredictionSVM <-SupportVectorPrediction(FeatureA,originaldata)
-
+# 
+# A <- getData("A", 2020)
+# CleanA <- cleanData(A)
+# FeatureA <- FeatureCalculation(CleanA, "A", 2020)
+# APrediction <-RandomForestPrediction(FeatureA,originaldata)
+# APredictionBoosting <-GradientBoostingPrediction(FeatureA,originaldata)
+# APredictionSVM <-SupportVectorPrediction(FeatureA,originaldata)
+# 
 
 
 ui <- fluidPage(
