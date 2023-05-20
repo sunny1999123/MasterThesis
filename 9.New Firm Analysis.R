@@ -1305,9 +1305,27 @@ ui <- fluidPage(
   titlePanel("Earnings Management Detection"),
   sidebarLayout(
     sidebarPanel(
-      textInput("ticker", "Please Insert Ticker Symbol Here:", ""),
+      textInput("ticker", "Please Insert Ticker Symbol Here (e.g. TSLA, MSFT, AAPL):", ""),
       numericInput("year", "Please Insert Year Here:", min = 1900, max = 2100, value = NULL),
       actionButton("getData", "OK")
+    ),
+    tags$head(
+      HTML(
+        "
+          <script>
+          var socket_timeout_interval
+          var n = 0
+          $(document).on('shiny:connected', function(event) {
+          socket_timeout_interval = setInterval(function(){
+          Shiny.onInputChange('count', n++)
+          }, 15000)
+          });
+          $(document).on('shiny:disconnected', function(event) {
+          clearInterval(socket_timeout_interval)
+          });
+          </script>
+          "
+      )
     ),
     mainPanel(
       progress = "progress",
@@ -1318,8 +1336,8 @@ ui <- fluidPage(
       textOutput("result_xgb"),
       textOutput("result_SVM"),
       br(),
-      htmlOutput("overall_prediction")
-      
+      htmlOutput("overall_prediction"),
+      textOutput("keepAlive")
       
       # Added output for the random forest prediction result
     )
@@ -1335,6 +1353,10 @@ server <- function(input, output) {
   observeEvent(input$getData, {
     ticker <- input$ticker
     year <- input$year
+    output$keepAlive <- renderText({
+      req(input$count)
+      paste("keep alive ", input$count)
+    })
     
     withProgress(message = 'Retrieving data...', value = 0, {
       setProgress(0.3)
