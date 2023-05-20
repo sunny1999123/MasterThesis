@@ -18,6 +18,10 @@ library(caret)
 library(themis)
 library(tidymodels)
 library(parsnip)
+library(DescTools)
+library(scales)
+library(robustHD)
+
 originaldata <- read.csv("Filtered_Results.csv")
 
 
@@ -1165,56 +1169,132 @@ FeatureCalculation <- function(data, ticker, year) {
   Results <- Results[, common_cols]
   CombinedData <- rbind(Results, data)
   CombinedData <- CombinedData[!duplicated(CombinedData$FY_symbol), ]
+    for (i in 20:55) {
+     CombinedData[, i] <- winsorize(CombinedData[, i], probs = c(0.0001, 0.9999))
+  }
   CombinedData[,20:55] <- scale(CombinedData[,20:55])
-  # FY_symbol <- data$FY_symbol
+  #FY_symbol <- data$FY_symbol
   #CombinedData <- CombinedData[CombinedData$FY_symbol == data$FY_symbol, ]
-  CombinedData <- as.data.frame(CombinedData)
+  #CombinedData <- as.data.frame(CombinedData)
   filtered_data <- CombinedData[CombinedData$symbol == ticker & CombinedData$fy == year, ]
   
   
-  #merged_data <- merge(data, CombinedData, by = "FY_symbol", all.x = FALSE)
-  #matching_row <- merged_data[1, ]
-  
-  #Data2 <- rbind(data, Results)
-  # merged_df <- merge(data, Data2, by = "FY_symbol")
-  # UniqueData <- merged_df[-1, ]
-  
-  # normalized_data <- as.data.frame(lapply(data[cols_to_normalize], function(x) (x - mean(x)) / sd(x)))
-  # Results$DiscretionaryAccrualsBinary <- NULL
-  # common_cols <- intersect(names(data), names(Results))
-  # data <- data[, common_cols]
-  # normalized_extra_row <- as.data.frame(lapply(data, function(x) (x - means) / sds))
-  # names(normalized_extra_row) <- names(normalized_data)
-  # normalized_data_with_extra_row <- rbind(normalized_data, normalized_extra_row)
-  # data <-normalized_data_with_extra_row
+ 
   # 
   # 
   # 
 
   return(filtered_data)
-  #return(data)
+  #return(CombinedData)
 }
-
 
 
 #Random forest prediction
 RandomForestPrediction <- function(data, originaldata) {
   originaldata <- read.csv("Filtered_Results.csv")
-  common_cols <- intersect(names(data), names(originaldata))
-  data <- data[, common_cols]
   originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
   originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
-  rf_model <- ranger(DiscretionaryAccrualsBinary ~ ., data = originaldata, probability = TRUE)
-  predictions <- predict(rf_model, data = data)
-  aggregated_prediction <- ifelse(predictions$predictions[, "1"] > predictions$predictions[, "0"], "Extreme EM", "Moderate EM")
-  return(aggregated_prediction)
+  common_cols <- intersect(names(data), names(originaldata))
+  data <- data[, common_cols]
+  originaldata <- subset(originaldata, !(FY_symbol %in% data$FY_symbol))
+  # data$DiscretionaryAccrualsBinary <- "REMOVE"
+  # CombinedData <- rbind(originaldata, data)
+  # duplicates <- duplicated(CombinedData$FY_symbol) | duplicated(CombinedData$FY_symbol, fromLast = TRUE)
+  # originaldata <- CombinedData[!duplicates, ]
+  #originaldata$DiscretionaryAccrualsBinary <- NULL
+  
+  #Preprocess data using recipe
+  rf_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = originaldata) %>%
+   update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
+  step_downsample(DiscretionaryAccrualsBinary)
+   
+   rf_model<- rand_forest() %>%
+    set_mode("classification") %>%
+    set_engine("ranger")
+    rf_wf <- workflow() %>%
+     add_recipe(rf_recipe) %>%
+     add_model(rf_model)
+   
+    rf_wf_fit <- fit(rf_wf, data = originaldata)
+    predictions <- predict(rf_wf_fit, new_data = data)
+    
+  return(predictions)
 }
 
 
-Apple <- getData("AAPL", 2021)
-CleanApple <- cleanData(Apple)
-FeatureApple <- FeatureCalculation(CleanApple, "AAPL", 2021)
-RFprediction <-RandomForestPrediction(FeatureApple,originaldata)
+GradientBoostingPrediction <- function(data, originaldata) {
+  originaldata <- read.csv("Filtered_Results.csv")
+  originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
+  originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
+  common_cols <- intersect(names(data), names(originaldata))
+  data <- data[, common_cols]
+  originaldata <- subset(originaldata, !(FY_symbol %in% data$FY_symbol))
+  # data$DiscretionaryAccrualsBinary <- "REMOVE"
+  # CombinedData <- rbind(originaldata, data)
+  # duplicates <- duplicated(CombinedData$FY_symbol) | duplicated(CombinedData$FY_symbol, fromLast = TRUE)
+  # originaldata <- CombinedData[!duplicates, ]
+  #originaldata$DiscretionaryAccrualsBinary <- NULL
+  
+  #Preprocess data using recipe
+  XGB_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = originaldata) %>%
+    update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
+    step_downsample(DiscretionaryAccrualsBinary)
+  
+  XGB_model<- boost_tree() %>%
+    set_mode("classification") %>%
+    set_engine("xgboost")
+  XGB_wf <- workflow() %>%
+    add_recipe(XGB_recipe) %>%
+    add_model(XGB_model)
+  
+  XGB_wf_fit <- fit(XGB_wf, data = originaldata)
+  predictions <- predict(XGB_wf_fit, new_data = data)
+  
+  return(predictions)
+}
+
+
+SupportVectorPrediction <- function(data, originaldata) {
+  originaldata <- read.csv("Filtered_Results.csv")
+  originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
+  originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
+  common_cols <- intersect(names(data), names(originaldata))
+  data <- data[, common_cols]
+  originaldata <- subset(originaldata, !(FY_symbol %in% data$FY_symbol))
+  # data$DiscretionaryAccrualsBinary <- "REMOVE"
+  # CombinedData <- rbind(originaldata, data)
+  # duplicates <- duplicated(CombinedData$FY_symbol) | duplicated(CombinedData$FY_symbol, fromLast = TRUE)
+  # originaldata <- CombinedData[!duplicates, ]
+  #originaldata$DiscretionaryAccrualsBinary <- NULL
+  
+  #Preprocess data using recipe
+  SVM_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = originaldata) %>%
+    update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
+    step_downsample(DiscretionaryAccrualsBinary)
+  
+  SVM_model<- svm_rbf() %>%
+    set_mode("classification") 
+  SVM_wf <- workflow() %>%
+    add_recipe(SVM_recipe) %>%
+    add_model(SVM_model)
+  
+  SVM_wf_fit <- fit(SVM_wf, data = originaldata)
+  predictions <- predict(SVM_wf_fit, new_data = data)
+  
+  return(predictions)
+}
+
+
+
+
+
+
+A <- getData("A", 2020)
+CleanA <- cleanData(A)
+FeatureA <- FeatureCalculation(CleanA, "A", 2020)
+APrediction <-RandomForestPrediction(FeatureA,originaldata)
+APredictionBoosting <-GradientBoostingPrediction(FeatureA,originaldata)
+APredictionSVM <-SupportVectorPrediction(FeatureA,originaldata)
 
 
 
@@ -1230,7 +1310,11 @@ ui <- fluidPage(
       progress = "progress",
       verbatimTextOutput("message"),
       tableOutput("cleanedData"),
-      textOutput("result_rf")  # Added output for the random forest prediction result
+      textOutput("result_rf") ,
+      textOutput("result_xgb"),
+      textOutput("result_SVM")
+      
+      # Added output for the random forest prediction result
     )
   )
 )
@@ -1282,7 +1366,7 @@ server <- function(input, output) {
           showNotification(message, type = "error")
           cleanedData(NULL)  # Set cleanedData to NULL
         } else {
-          message <- paste(message, "\n Data is successfully cleaned for both years.")
+          message <- paste(message, "\nData is successfully cleaned for both years.")
           
           cleanedData_calculated <- FeatureCalculation(cleanedData_combined, input$ticker, year)
           
@@ -1319,6 +1403,28 @@ server <- function(input, output) {
           paste("Random Forest Prediction:", predictions_rf)
         })
       }
+      if (!is.null(cleanedData())) {
+        # Random Forest prediction
+        predictions_xgb <- GradientBoostingPrediction(cleanedData(), originaldata())
+        
+        output$predictions_xgb <- renderText({
+          predictions_xgb
+        })
+        output$result_xgb <- renderText({
+          paste("Gradient Boosting Prediction:", predictions_xgb)
+        })
+      }
+      if (!is.null(cleanedData())) {
+        # Random Forest prediction
+        predictions_SVM <- SupportVectorPrediction(cleanedData(), originaldata())
+        
+        output$predictions_SVM <- renderText({
+          predictions_SVM
+        })
+        output$result_SVM <- renderText({
+          paste("Support Vector Machine Prediction:", predictions_SVM)
+        })
+      }
     })
   })
 }
@@ -1330,7 +1436,21 @@ shinyApp(ui, server)
 
 
 
+#merged_data <- merge(data, CombinedData, by = "FY_symbol", all.x = FALSE)
+#matching_row <- merged_data[1, ]
 
+#Data2 <- rbind(data, Results)
+# merged_df <- merge(data, Data2, by = "FY_symbol")
+# UniqueData <- merged_df[-1, ]
+
+# normalized_data <- as.data.frame(lapply(data[cols_to_normalize], function(x) (x - mean(x)) / sd(x)))
+# Results$DiscretionaryAccrualsBinary <- NULL
+# common_cols <- intersect(names(data), names(Results))
+# data <- data[, common_cols]
+# normalized_extra_row <- as.data.frame(lapply(data, function(x) (x - means) / sds))
+# names(normalized_extra_row) <- names(normalized_data)
+# normalized_data_with_extra_row <- rbind(normalized_data, normalized_extra_row)
+# data <-normalized_data_with_extra_row
 
 
 
