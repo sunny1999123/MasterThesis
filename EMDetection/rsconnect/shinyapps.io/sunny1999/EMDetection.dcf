@@ -11,6 +11,3 @@ when: 1684588562.19201
 lastSyncTime: 1684588562.19204
 asMultiple: FALSE
 asStatic: FALSE
-location / {
-    app_idle_timeout 0;
-}
