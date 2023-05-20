@@ -21,6 +21,7 @@ library(parsnip)
 library(DescTools)
 library(scales)
 library(robustHD)
+library(kernlab)
 
 originaldata <- read.csv("Filtered_Results.csv")
 
@@ -1169,8 +1170,8 @@ FeatureCalculation <- function(data, ticker, year) {
   Results <- Results[, common_cols]
   CombinedData <- rbind(Results, data)
   CombinedData <- CombinedData[!duplicated(CombinedData$FY_symbol), ]
-    for (i in 20:55) {
-     CombinedData[, i] <- winsorize(CombinedData[, i], probs = c(0.0001, 0.9999))
+  for (i in 20:55) {
+    CombinedData[, i] <- winsorize(CombinedData[, i], probs = c(0.0001, 0.9999))
   }
   CombinedData[,20:55] <- scale(CombinedData[,20:55])
   #FY_symbol <- data$FY_symbol
@@ -1179,11 +1180,11 @@ FeatureCalculation <- function(data, ticker, year) {
   filtered_data <- CombinedData[CombinedData$symbol == ticker & CombinedData$fy == year, ]
   
   
- 
+  
   # 
   # 
   # 
-
+  
   return(filtered_data)
   #return(CombinedData)
 }
@@ -1205,20 +1206,20 @@ RandomForestPrediction <- function(data, originaldata) {
   
   #Preprocess data using recipe
   rf_recipe <- recipe(DiscretionaryAccrualsBinary ~ ., data = originaldata) %>%
-   update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
-  step_downsample(DiscretionaryAccrualsBinary)
-   
-   rf_model<- rand_forest() %>%
+    update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
+    step_downsample(DiscretionaryAccrualsBinary)
+  
+  rf_model<- rand_forest() %>%
     set_mode("classification") %>%
     set_engine("ranger")
-    rf_wf <- workflow() %>%
-     add_recipe(rf_recipe) %>%
-     add_model(rf_model)
-   
-    rf_wf_fit <- fit(rf_wf, data = originaldata)
-    predictions <- predict(rf_wf_fit, new_data = data)
-    labels <- ifelse(predictions == 0, "Moderate Proxy for Earnings Management", "Extreme Proxy for Earnings Management")
-    
+  rf_wf <- workflow() %>%
+    add_recipe(rf_recipe) %>%
+    add_model(rf_model)
+  
+  rf_wf_fit <- fit(rf_wf, data = originaldata)
+  predictions <- predict(rf_wf_fit, new_data = data)
+  labels <- ifelse(predictions == 0, "Moderate Proxy for Earnings Management", "Extreme Proxy for Earnings Management")
+  
   return(labels)
 }
 
@@ -1309,24 +1310,6 @@ ui <- fluidPage(
       numericInput("year", "Please Insert Year Here:", min = 1900, max = 2100, value = NULL),
       actionButton("getData", "OK")
     ),
-    tags$head(
-      HTML(
-        "
-          <script>
-          var socket_timeout_interval
-          var n = 0
-          $(document).on('shiny:connected', function(event) {
-          socket_timeout_interval = setInterval(function(){
-          Shiny.onInputChange('count', n++)
-          }, 15000)
-          });
-          $(document).on('shiny:disconnected', function(event) {
-          clearInterval(socket_timeout_interval)
-          });
-          </script>
-          "
-      )
-    ),
     mainPanel(
       progress = "progress",
       verbatimTextOutput("message"),
@@ -1345,7 +1328,6 @@ ui <- fluidPage(
 )
 
 
-
 server <- function(input, output) {
   cleanedData <- reactiveVal(NULL)  # Store the cleaned data
   originaldata <- reactiveVal(NULL)  # Store the original data
@@ -1353,10 +1335,6 @@ server <- function(input, output) {
   observeEvent(input$getData, {
     ticker <- input$ticker
     year <- input$year
-    output$keepAlive <- renderText({
-      req(input$count)
-      paste("keep alive ", input$count)
-    })
     
     withProgress(message = 'Retrieving data...', value = 0, {
       setProgress(0.3)
@@ -1424,7 +1402,7 @@ server <- function(input, output) {
         }
       })
       output$financial_info_text <- renderText({
-        paste("Financial information of", ticker)
+        paste("Financial information of", company_name)
       })
       
       
@@ -1469,12 +1447,27 @@ server <- function(input, output) {
         sum(grepl("Extreme", predictions_xgb)) +
         sum(grepl("Extreme", predictions_SVM))
       
+      
       overall_prediction <- ifelse(moderate_count >= 2, "Moderately", "Extremely")
+      company_name <- INFO$title[INFO$ticker == input$ticker]
       
       output$overall_prediction <- renderText({
-        prediction <- paste("Based on the Machine Learning models, the overall prediction is that the firm with ticker symbol", ticker, "in the year", year, "had a", overall_prediction, "Upwards/Downwards Proxy for Earnings Management. This means that the firm likely", ifelse(overall_prediction == "Moderately", "did not engage", "engaged"), "in Earnings Management, based on the Machine Learning models.")
+        if (is.na(company_name)) {
+          prediction <- "Company name not found for the given ticker symbol"
+        } else {
+          prediction <- paste(
+            "Based on the Machine Learning models, the overall prediction is that the company",
+            company_name,
+            "in the year", input$year, "had a", overall_prediction,
+            "Upwards/Downwards Proxy for Earnings Management.",
+            "This means that the firm likely", ifelse(overall_prediction == "Moderately", "did not engage", "engaged"),
+            "in Earnings Management, based on the Machine Learning models."
+          )
+        }
+        
         HTML(paste("<span style='font-weight: bold;'>", prediction, "</span>"))
       })
+      
     })
   })
 }
