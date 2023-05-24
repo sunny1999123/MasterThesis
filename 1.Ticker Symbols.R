@@ -6,7 +6,7 @@ library(dplyr)
 library(tidyr)
 library(reshape)
 #Import Ticker Symbols 
-Ticker_Symbols <- read_excel("Ticker_Symbols.xlsx")
+Ticker_Symbols <- read_excel("Data/Ticker_Symbols.xlsx")
 
 
 #First impression to data and Convert date column to date
@@ -43,10 +43,10 @@ Unique_Tickers <- Ticker_symbbol_Long_format %>%
   subset(select= -c(Year, Id))
 
 #Export to text file for WRDS 
-write.table(Unique_Tickers, "Unique_Tickers.txt", row.names = F, col.names = F, quote = F)
+write.table(Unique_Tickers, "Data/Unique_Tickers.txt", row.names = F, col.names = F, quote = F)
 
 #Import SIC codes that is retrieved from WRDS
-Industry_codes <- read.csv("Industry_Codes.csv", sep=";")
+Industry_codes <- read.csv("Data/Industry_Codes.csv", sep=";")
 
 #Change colnames to get similar format
 colnames(Industry_codes) <- c("Ticker", "SIC")
@@ -65,7 +65,7 @@ Tickers <- subset(Tickers, select=c(Ticker, Year))
 
 
 #Export to CSV 
-write.csv(Tickers, "Tickers.csv", row.names = FALSE)
+write.csv(Tickers, "Data/Tickers.csv", row.names = FALSE)
 
 
 
