@@ -1,6 +1,8 @@
 library(shiny)
+library(DT)
 library(data.table)
 library(httr)
+library(purrr)
 library(jsonlite)
 library(stringr)
 library(workflows)
@@ -23,7 +25,7 @@ library(scales)
 library(robustHD)
 library(kernlab)
 library(shinydisconnect)
-
+library(tidyverse)
 originaldata <- read.csv("Filtered_Results.csv")
 
 
@@ -1303,10 +1305,10 @@ SupportVectorPrediction <- function(data, originaldata) {
 ui <- fluidPage(
   titlePanel("Earnings Management Detection"),
   div(
-    h6("This tool is part of the thesis of Apoorv Sunny Bhatia for the
+    h6(paste("This tool is part of the thesis of Apoorv Sunny Bhatia for the
        MSc in Business Analytics & Management. The thesis can be downloaded
-       via:"),
-    h6(a("https://github.com/sunny1999123/MasterThesis/blob/main/Thesis.pdf", "Thesis.pdf"))
+       here:"),a("Thesis", href = "https://github.com/sunny1999123/MasterThesis/blob/main/Thesis.pdf")),
+    #h6(a("Thesis", href = "https://github.com/sunny1999123/MasterThesis/blob/main/Thesis.pdf"))
   ),  
   disconnectMessage(text = "An error occurred. Please try a different input"),
   sidebarLayout(
@@ -1319,7 +1321,7 @@ ui <- fluidPage(
       progress = "progress",
       verbatimTextOutput("message"),
       textOutput("financial_info_text"),
-      tableOutput("cleanedData"),
+      DT::dataTableOutput("cleanedData"),
       textOutput("result_rf") ,
       textOutput("result_xgb"),
       textOutput("result_SVM"),
@@ -1399,14 +1401,23 @@ server <- function(input, output) {
         message
       })
       
-      output$cleanedData <- renderTable({
+      output$cleanedData <- DT::renderDataTable({
         if (!is.null(cleanedData())) {
-          cleanedData() %>%
+          transposed_data <- cleanedData() %>%
             dplyr::select(-3) %>%
             rename(Year = fy) %>%
-            rename(Ticker= symbol)# Exclude first three columns
+            mutate_at(vars(3:ncol(.)), ~sprintf("%.2f", .)) %>%
+            rename(Ticker = symbol) %>%
+            tidyr::gather("Name", "Value") 
+          
+          datatable(
+            transposed_data,
+            options = list(pageLength = 5),
+            rownames = FALSE
+          )
         }
       })
+      
       output$financial_info_text <- renderText({
         paste("Financial information of", company_name)
       })
