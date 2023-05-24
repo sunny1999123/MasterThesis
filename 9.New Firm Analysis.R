@@ -1406,8 +1406,9 @@ server <- function(input, output) {
           transposed_data <- cleanedData() %>%
             dplyr::select(-3) %>%
             rename(Year = fy) %>%
+            mutate_at(vars(3:ncol(.)), ~sprintf("%.2f", .)) %>%
             rename(Ticker = symbol) %>%
-            tidyr::gather("Name", "Value") # Transpose the data frame and gather column names and values
+            tidyr::gather("Name", "Value") 
 
           datatable(
             transposed_data,
