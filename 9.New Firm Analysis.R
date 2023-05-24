@@ -1291,21 +1291,20 @@ SupportVectorPrediction <- function(data, originaldata) {
 
 
 
-
-
-# 
 # A <- getData("A", 2020)
 # CleanA <- cleanData(A)
 # FeatureA <- FeatureCalculation(CleanA, "A", 2020)
 # APrediction <-RandomForestPrediction(FeatureA,originaldata)
 # APredictionBoosting <-GradientBoostingPrediction(FeatureA,originaldata)
 # APredictionSVM <-SupportVectorPrediction(FeatureA,originaldata)
-# 
+
 
 
 ui <- fluidPage(
   titlePanel("Earnings Management Detection"),
-  textOutput("Testttttt") ,
+  div(h6("This tool is part of the thesis of Apoorv Sunny Bhatia for the
+         MSc in Business Analytics & Management. The thesis can be downloaded
+         via https://github.com/sunny1999123/MasterThesis/blob/main/Thesis.pdf")),  
   disconnectMessage(text = "An error occurred. Please try a different input"),
   sidebarLayout(
     sidebarPanel(
@@ -1479,7 +1478,7 @@ server <- function(input, output) {
 
 
 shinyApp(ui, server)
-
+  
 
 
 
