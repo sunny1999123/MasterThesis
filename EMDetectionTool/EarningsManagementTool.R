@@ -1406,7 +1406,7 @@ server <- function(input, output) {
           transposed_data <- cleanedData() %>%
             dplyr::select(-3) %>%
             rename(Year = fy) %>%
-            mutate_at(vars(3:ncol(.)), ~sprintf("%.2f", .)) %>%
+            mutate_at(vars(3:ncol(.)), ~comma(format(round(., 2), nsmall = 2, big.mark = ","))) %>%
             rename(Ticker = symbol) %>%
             tidyr::gather("Name", "Value") 
           
@@ -1419,7 +1419,7 @@ server <- function(input, output) {
       })
       
       output$financial_info_text <- renderText({
-        paste("Financial information of", company_name)
+        paste("Financial information of", company_name, ":")
       })
       
       
