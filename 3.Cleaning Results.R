@@ -6,9 +6,9 @@ library(tidyr)
 library(ggplot2)
 
 #Read results of financial info
-Results <- read.csv("result_df.csv")
-Results_2022 <- read.csv("result_2022_df.csv")
-Results_2022_remaining <- read.csv("result_2022_remaining_df.csv")
+Results <- read.csv("Data/result_df.csv")
+Results_2022 <- read.csv("Data/result_2022_df.csv")
+Results_2022_remaining <- read.csv("Data/result_2022_remaining_df.csv")
 Results <- rbind(Results,Results_2022,Results_2022_remaining)
 
 #Delete quarterly data 
@@ -1142,5 +1142,5 @@ df_complete_cases %>%
   summarize(n_unique_items = n_distinct(FY_symbol))
 
 
-write.csv(df_complete_cases, "CleanedResults.csv", row.names = FALSE)
+write.csv(df_complete_cases, "Data/CleanedResults.csv", row.names = FALSE)
 
