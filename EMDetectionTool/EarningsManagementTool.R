@@ -26,7 +26,7 @@ library(robustHD)
 library(kernlab)
 library(shinydisconnect)
 library(tidyverse)
-originaldata <- read.csv("Filtered_Results.csv")
+originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
 
 
 #Get CIK symbols per ticker and make a dataframe of it from SEC api
@@ -1168,7 +1168,7 @@ FeatureCalculation <- function(data, ticker, year) {
   data[, 4:55][is.na(data[, 4:55])] <- 0
   data[] <- lapply(data, function(x) ifelse(is.infinite(x), 0, x))
   
-  Results <- as.data.frame(read.csv("PreWinsorized.csv"))
+  Results <- as.data.frame(read.csv("EMDetectionTool/PreWinsorized.csv"))
   common_cols <- intersect(names(data), names(Results))
   Results <- Results[, common_cols]
   CombinedData <- rbind(Results, data)
@@ -1195,7 +1195,7 @@ FeatureCalculation <- function(data, ticker, year) {
 
 #Random forest prediction
 RandomForestPrediction <- function(data, originaldata) {
-  originaldata <- read.csv("Filtered_Results.csv")
+  originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
   originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
   originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
   common_cols <- intersect(names(data), names(originaldata))
@@ -1228,7 +1228,7 @@ RandomForestPrediction <- function(data, originaldata) {
 
 
 GradientBoostingPrediction <- function(data, originaldata) {
-  originaldata <- read.csv("Filtered_Results.csv")
+  originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
   originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
   originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
   common_cols <- intersect(names(data), names(originaldata))
@@ -1261,7 +1261,7 @@ GradientBoostingPrediction <- function(data, originaldata) {
 
 
 SupportVectorPrediction <- function(data, originaldata) {
-  originaldata <- read.csv("Filtered_Results.csv")
+  originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
   originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
   originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
   common_cols <- intersect(names(data), names(originaldata))
@@ -1406,7 +1406,7 @@ server <- function(input, output) {
           transposed_data <- cleanedData() %>%
             dplyr::select(-3) %>%
             rename(Year = fy) %>%
-            mutate_at(vars(3:ncol(.)), ~comma(format(round(., 2), nsmall = 2, big.mark = ","))) %>%
+            mutate_at(vars(3:ncol(.)), ~sprintf("%.2f", .)) %>%
             rename(Ticker = symbol) %>%
             tidyr::gather("Name", "Value") 
           
