@@ -11,7 +11,7 @@ library("kernlab")
 library("skimr")
 library(recipes)
 #Load dataframe
-Results <- as.data.frame(read.csv("PreDimensionalityData"))
+Results <- as.data.frame(read.csv("Data/PreDimensionalityData"))
 
 
 #############
@@ -83,7 +83,7 @@ EMPlot <-ggplot(counts, aes(x = DiscretionaryAccrualsBinary, y = count, fill = f
 EMPlot
 
 
-ggsave("DiscretionaryAccruals.pdf", plot = EMPlot, width = 6, height = 4, dpi = 300)
+ggsave("Figures/DiscretionaryAccruals.pdf", plot = EMPlot, width = 6, height = 4, dpi = 300)
 
 ###################################################################
 #Subset Selection#
@@ -156,7 +156,7 @@ LassoAccuracy <- lasso_tune_metrics %>% filter(.metric == "accuracy") %>%
   scale_x_log10() + 
   labs(y = "Accuracy", x = expression(lambda))
 
-ggsave("LassoAccuracy.pdf", plot = LassoAccuracy, width = 6, height = 4, dpi = 300)
+ggsave("Figures/LassoAccuracy.pdf", plot = LassoAccuracy, width = 6, height = 4, dpi = 300)
 
 
 #Select best model based on one standard error rule
@@ -202,4 +202,4 @@ ResultsFiltered <- Results[,!(colnames(Results) %in% NonInterestedVariables)]
 
 
 
-write.csv(ResultsFiltered, "Filtered_Results.csv", row.names = FALSE)
+write.csv(ResultsFiltered, "Data/Filtered_Results.csv", row.names = FALSE)
