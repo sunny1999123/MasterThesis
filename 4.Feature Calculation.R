@@ -8,7 +8,7 @@ library(robustHD)
 library(DescTools)
 
 #Load dataframe
-Results <- as.data.frame(read.csv("CleanedResults.csv"))
+Results <- as.data.frame(read.csv("Data/CleanedResults.csv"))
 Results <-Results %>% arrange(symbol, fy)
 #Results2 <- Results[Results$fy != 2017,]
 
@@ -126,7 +126,7 @@ Results %>%
 # # Loop through columns and convert to numeric
 # Results[, cols] <- apply(Results[,cols], 2, as.numeric)
 PreWinsorizedResults <- Results
-write.csv(PreWinsorizedResults, "PreWinsorized.csv", row.names = FALSE)
+write.csv(PreWinsorizedResults, "Data/PreWinsorized.csv", row.names = FALSE)
 
 ResultsWinsor <- Results
 
@@ -173,5 +173,5 @@ for (col in cols) {
 
 #Only keep the interested variables 
 Final_data <- cbind(normalized_results[,1:3],normalized_results[,20:55], normalized_results[,62])
-write.csv(Final_data, "PreDimensionalityData", row.names = FALSE)
+write.csv(Final_data, "Data/PreDimensionalityData.csv", row.names = FALSE)
 
