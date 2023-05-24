@@ -16,7 +16,7 @@ library("knitr")
 library("xgboost")
 
 
-Results <- as.data.frame(read.csv("Filtered_Results.csv"))
+Results <- as.data.frame(read.csv("Data/Filtered_Results.csv"))
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
 Results$DiscretionaryAccrualsBinary <- factor(Results$DiscretionaryAccrualsBinary, levels = c("1", "0"))
 str(Results$DiscretionaryAccrualsBinary)
@@ -72,7 +72,7 @@ xgb_tune_res <- tune_grid(
   metrics = class_metrics
 )
 
-saveRDS(xgb_tune_res, "xgb_tune_res.rds")
+saveRDS(xgb_tune_res, "Tuning/xgb_tune_res.rds")
 
 xgb_tune_metrics <- xgb_tune_res %>%
   collect_metrics()
@@ -86,7 +86,7 @@ xgb_tune_fig <- xgb_tune_res %>%
   geom_path() +
   facet_wrap(learn_rate ~ tree_depth)
 
-ggsave("XGBAccuracySensSpec.pdf", plot = xgb_tune_fig, width = 6, height = 4, dpi = 300)
+ggsave("Figures/XGBAccuracySensSpec.pdf", plot = xgb_tune_fig, width = 6, height = 4, dpi = 300)
 
 
 xgb_tune_metrics %>% 
