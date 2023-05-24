@@ -20,8 +20,8 @@ library(foreach)
 
 
 #Import Ticker Symbols and extra CIK report, only use first three columns
-Tickers <- read.csv("Tickers.csv")
-cik_ticker <- read.csv("cik_ticker.csv", sep = ";")
+Tickers <- read.csv("Data/Tickers.csv")
+cik_ticker <- read.csv("Data/cik_ticker.csv", sep = ";")
 cik_ticker <- subset(cik_ticker, select = c(1:3))
 
 #Get CIK symbols per ticker and make a dataframe of it from SEC api
@@ -252,18 +252,18 @@ result_list_2022_remaining <- foreach(i = seq_along(Difference_2022), .combine =
   process_ticker(Difference_2022[i], years_2022_remaining[i])
 }
 
-write.csv(result_list_2022_remaining, "result_2022_remaining_df.csv", row.names = FALSE)
+write.csv(result_list_2022_remaining, "Data/result_2022_remaining_df.csv", row.names = FALSE)
 
 years_2022_remaining <- Year_2022[1:55]
-result_2022 <- read.csv("result_2022_df.csv", sep=",")
+result_2022 <- read.csv("Data/result_2022_df.csv", sep=",")
 tickers_2022_realized <- unique(result_2022$symbol)
 Difference_2022 <- setdiff(Tickers_2022,tickers_2022_realized)
 
-write.csv(result_list_2022, "result_2022_df.csv", row.names = FALSE)
+write.csv(result_list_2022, "Data/result_2022_df.csv", row.names = FALSE)
 
 
 result_df <- rbind(result_list,result_list_2016,result_list_2017,result_list_2018,result_list_2019,result_list_2020,result_list_2021,result_list_2022 )
-write.csv(result_df, "result_df.csv", row.names = FALSE)
+write.csv(result_df, "Data/result_df.csv", row.names = FALSE)
 
 
 cat(sprintf("Number of errors: %d", Error_count))
