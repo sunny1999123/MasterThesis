@@ -14,7 +14,7 @@ library("ggridges")
 library("themis")
 library("knitr")
 
-Results <- as.data.frame(read.csv("Filtered_Results.csv"))
+Results <- as.data.frame(read.csv("Data/Filtered_Results.csv"))
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
 Results$DiscretionaryAccrualsBinary <- factor(Results$DiscretionaryAccrualsBinary, levels = c("1", "0"))
 str(Results$DiscretionaryAccrualsBinary)
@@ -62,7 +62,7 @@ rf_tune_res <- tune_grid(
   control = control_grid(save_pred = TRUE, verbose = TRUE)
 )
 
-saveRDS(rf_tune_res, "rf_tune_res.rds")
+saveRDS(rf_tune_res, "Tuning/rf_tune_res.rds")
 
 rf_tune_res %>%
   collect_metrics()
@@ -80,7 +80,7 @@ RF_sens_spec <- rf_tune_res %>%
   scale_color_manual(values=c("black", "black"))
 
 
-ggsave("RFSensSpec.pdf", plot = RF_sens_spec, width = 6, height = 4, dpi = 300)
+ggsave("Figures/RFSensSpec.pdf", plot = RF_sens_spec, width = 6, height = 4, dpi = 300)
 
 RF_Accuracy <- rf_tune_res %>%
   collect_metrics() %>%
@@ -93,7 +93,7 @@ RF_Accuracy <- rf_tune_res %>%
   facet_grid(.metric ~ ., scales = "free_y") +
   scale_color_manual(values=c("black", "black"))
 
-ggsave("RFAccuracy.pdf", plot = RF_Accuracy, width = 6, height = 4, dpi = 300)
+ggsave("Figures/RFAccuracy.pdf", plot = RF_Accuracy, width = 6, height = 4, dpi = 300)
 
 
 best_acc <- select_best(rf_tune_res, "accuracy")
@@ -133,5 +133,5 @@ rf_vi_fit <- rf_vi_wf %>% fit(data = Results_train)
 rf_vi_fit %>% extract_fit_parsnip() %>% vi()
 RFVI <- rf_vi_fit %>% extract_fit_parsnip() %>% vip(geom = "point", num_features = 10)
 
-ggsave("RFVI.pdf", plot = RFVI, width = 6, height = 4, dpi = 300)
+ggsave("Figures/RFVI.pdf", plot = RFVI, width = 6, height = 4, dpi = 300)
 
