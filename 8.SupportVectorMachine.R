@@ -17,7 +17,7 @@ library("xgboost")
 library("e1071")
 
 
-Results <- as.data.frame(read.csv("Filtered_Results.csv"))
+Results <- as.data.frame(read.csv("Data/Filtered_Results.csv"))
 
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
 Results$DiscretionaryAccrualsBinary <- factor(Results$DiscretionaryAccrualsBinary, levels = c("1", "0"))
@@ -99,7 +99,7 @@ svm_sens_spec <- svm_tune_res %>%
   labs(x="lambda")
 
 
-ggsave("SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, dpi = 300)
+ggsave("Figures/SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, dpi = 300)
 
 
 model <- Metric_results %>%
