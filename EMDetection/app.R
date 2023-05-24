@@ -22,6 +22,7 @@ library(DescTools)
 library(scales)
 library(robustHD)
 library(kernlab)
+library(shinydisconnect)
 
 originaldata <- read.csv("Filtered_Results.csv")
 
@@ -1304,6 +1305,7 @@ SupportVectorPrediction <- function(data, originaldata) {
 
 ui <- fluidPage(
   titlePanel("Earnings Management Detection"),
+  disconnectMessage(text = "An error occurred. Please try again"),
   sidebarLayout(
     sidebarPanel(
       textInput("ticker", "Please Insert Ticker Symbol Here (e.g. TSLA, MSFT, AAPL):", ""),
@@ -1335,8 +1337,8 @@ server <- function(input, output) {
   observeEvent(input$getData, {
     ticker <- input$ticker
     year <- input$year
-
-    withProgress(message = 'Retrieving data...', value = 0, {
+    
+    withProgress(message = 'Progress...', value = 0, {
       setProgress(0.3)
       
       Sys.sleep(2)
@@ -1398,7 +1400,9 @@ server <- function(input, output) {
       output$cleanedData <- renderTable({
         if (!is.null(cleanedData())) {
           cleanedData() %>%
-            dplyr::select(-1:-3)  # Exclude first three columns
+            dplyr::select(-3) %>%
+            rename(Year = fy) %>%
+            rename(Ticker= symbol)# Exclude first three columns
         }
       })
       output$financial_info_text <- renderText({

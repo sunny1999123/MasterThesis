@@ -22,6 +22,7 @@ library(DescTools)
 library(scales)
 library(robustHD)
 library(kernlab)
+library(shinydisconnect)
 
 originaldata <- read.csv("Filtered_Results.csv")
 
@@ -1304,10 +1305,12 @@ SupportVectorPrediction <- function(data, originaldata) {
 
 ui <- fluidPage(
   titlePanel("Earnings Management Detection"),
+  textOutput("Testttttt") ,
+  disconnectMessage(text = "An error occurred. Please try a different input"),
   sidebarLayout(
     sidebarPanel(
       textInput("ticker", "Please Insert Ticker Symbol Here (e.g. TSLA, MSFT, AAPL):", ""),
-      numericInput("year", "Please Insert Year Here:", min = 1900, max = 2100, value = NULL),
+      numericInput("year", "Please Insert Year Here:", value = NULL),
       actionButton("getData", "OK")
     ),
     mainPanel(
@@ -1322,21 +1325,20 @@ ui <- fluidPage(
       htmlOutput("overall_prediction"),
       textOutput("keepAlive")
       
-      # Added output for the random forest prediction result
     )
   )
 )
 
 
 server <- function(input, output) {
-  cleanedData <- reactiveVal(NULL)  # Store the cleaned data
-  originaldata <- reactiveVal(NULL)  # Store the original data
+  cleanedData <- reactiveVal(NULL)  
+  originaldata <- reactiveVal(NULL)  
   
   observeEvent(input$getData, {
     ticker <- input$ticker
     year <- input$year
     
-    withProgress(message = 'Retrieving data...', value = 0, {
+    withProgress(message = 'Progress...', value = 0, {
       setProgress(0.3)
       
       Sys.sleep(2)
@@ -1350,7 +1352,7 @@ server <- function(input, output) {
       setProgress(0.9)
       
       if (!is.null(data) && !is.null(data_previous_year)) {
-        message <- paste("Data is successfully retrieved for", year, "and", year - 1, ".")
+        message <- "Data is successfully retrieved for"
       } else {
         message <- "Problem with data retrieval."
         showNotification(message, type = "error")
@@ -1373,7 +1375,7 @@ server <- function(input, output) {
           showNotification(message, type = "error")
           cleanedData(NULL)  # Set cleanedData to NULL
         } else {
-          message <- paste(message, "\nData is successfully cleaned for both years.")
+          message <- paste(message, "\nData is successfully cleaned.")
           
           cleanedData_calculated <- FeatureCalculation(cleanedData_combined, input$ticker, year)
           
@@ -1398,7 +1400,9 @@ server <- function(input, output) {
       output$cleanedData <- renderTable({
         if (!is.null(cleanedData())) {
           cleanedData() %>%
-            dplyr::select(-1:-3)  # Exclude first three columns
+            dplyr::select(-3) %>%
+            rename(Year = fy) %>%
+            rename(Ticker= symbol)# Exclude first three columns
         }
       })
       output$financial_info_text <- renderText({
