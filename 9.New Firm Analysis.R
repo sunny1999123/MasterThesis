@@ -1302,9 +1302,12 @@ SupportVectorPrediction <- function(data, originaldata) {
 
 ui <- fluidPage(
   titlePanel("Earnings Management Detection"),
-  div(h6("This tool is part of the thesis of Apoorv Sunny Bhatia for the
-         MSc in Business Analytics & Management. The thesis can be downloaded
-         via https://github.com/sunny1999123/MasterThesis/blob/main/Thesis.pdf")),  
+  div(
+    h6("This tool is part of the thesis of Apoorv Sunny Bhatia for the
+       MSc in Business Analytics & Management. The thesis can be downloaded
+       via:"),
+    h6(a("https://github.com/sunny1999123/MasterThesis/blob/main/Thesis.pdf", "Thesis.pdf"))
+  ),  
   disconnectMessage(text = "An error occurred. Please try a different input"),
   sidebarLayout(
     sidebarPanel(
@@ -1351,7 +1354,7 @@ server <- function(input, output) {
       setProgress(0.9)
       
       if (!is.null(data) && !is.null(data_previous_year)) {
-        message <- "Data is successfully retrieved for"
+        message <- "Data is successfully retrieved"
       } else {
         message <- "Problem with data retrieval."
         showNotification(message, type = "error")
