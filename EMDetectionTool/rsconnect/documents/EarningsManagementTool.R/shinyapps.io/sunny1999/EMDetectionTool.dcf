@@ -5,9 +5,9 @@ account: sunny1999
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 9191610
-bundleId: 7266356
+bundleId: 7266390
 url: https://sunny1999.shinyapps.io/EMDetectionTool/
-when: 1685091223.16554
-lastSyncTime: 1685091223.16558
+when: 1685091847.54097
+lastSyncTime: 1685091847.541
 asMultiple: FALSE
 asStatic: FALSE

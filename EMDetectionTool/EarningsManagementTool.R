@@ -26,7 +26,6 @@ library(robustHD)
 library(kernlab)
 library(shinydisconnect)
 library(tidyverse)
-originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
 originaldata <- read.csv("Filtered_Results.csv")
 
 #Get CIK symbols per ticker and make a dataframe of it from SEC api
@@ -1168,7 +1167,7 @@ FeatureCalculation <- function(data, ticker, year) {
   data[, 4:55][is.na(data[, 4:55])] <- 0
   data[] <- lapply(data, function(x) ifelse(is.infinite(x), 0, x))
   
-  Results <- as.data.frame(read.csv("EMDetectionTool/PreWinsorized.csv"))
+  Results <- as.data.frame(read.csv("PreWinsorized.csv"))
   common_cols <- intersect(names(data), names(Results))
   Results <- Results[, common_cols]
   CombinedData <- rbind(Results, data)
@@ -1195,7 +1194,7 @@ FeatureCalculation <- function(data, ticker, year) {
 
 #Random forest prediction
 RandomForestPrediction <- function(data, originaldata) {
-  originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
+  originaldata <- read.csv("Filtered_Results.csv")
   originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
   originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
   common_cols <- intersect(names(data), names(originaldata))
@@ -1228,7 +1227,7 @@ RandomForestPrediction <- function(data, originaldata) {
 
 #Gradient boosting prediction
 GradientBoostingPrediction <- function(data, originaldata) {
-  originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
+  originaldata <- read.csv("Filtered_Results.csv")
   originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
   originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
   common_cols <- intersect(names(data), names(originaldata))
@@ -1261,7 +1260,7 @@ GradientBoostingPrediction <- function(data, originaldata) {
 
 #Support Vector Machine prediction
 SupportVectorPrediction <- function(data, originaldata) {
-  originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
+  originaldata <- read.csv("Filtered_Results.csv")
   originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
   originaldata$DiscretionaryAccrualsBinary <- factor(originaldata$DiscretionaryAccrualsBinary, levels = c("1", "0"))
   common_cols <- intersect(names(data), names(originaldata))

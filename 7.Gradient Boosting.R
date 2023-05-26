@@ -65,11 +65,13 @@ grid_max_entropy(trees(range = c(0, 10000)),
 xgb_grid <- expand.grid(trees = 500 * 1:20, 
                         learn_rate = c(0.1, 0.01), 
                         tree_depth = 1:3)
+
 xgb_tune_res <- tune_grid(
   xgb_tune_wf,
   resamples = cv_folds,
   grid = xgb_grid,
-  metrics = class_metrics
+  metrics = class_metrics,
+  control = control_grid(verbose = TRUE)
 )
 
 saveRDS(xgb_tune_res, "Tuning/xgb_tune_res.rds")

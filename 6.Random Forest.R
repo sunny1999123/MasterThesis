@@ -13,6 +13,9 @@ library("corrplot")
 library("ggridges")
 library("themis")
 library("knitr")
+library(progress)
+library(foreach)
+
 
 Results <- as.data.frame(read.csv("Data/Filtered_Results.csv"))
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
@@ -59,11 +62,11 @@ rf_tune_res <- tune_grid(
   resamples = cv_folds,
   grid = expand.grid(mtry = 1:15, trees = seq(50, 2000, 50)),
   metrics = class_metrics,
-  control = control_grid(save_pred = TRUE, verbose = TRUE)
+  control = control_grid(save_pred = TRUE)
 )
 
-saveRDS(rf_tune_res, "Tuning/rf_tune_res.rds")
 
+saveRDS(rf_tune_res, "Tuning/rf_tune_res.rds")
 rf_tune_res %>%
   collect_metrics()
 
