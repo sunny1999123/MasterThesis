@@ -71,6 +71,35 @@ rf_tune_res %>%
   collect_metrics()
 
 
+
+
+
+RF_sens_specmtry <- rf_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("accuracy", "sensitivity", "specificity", "roc_auc")) %>%
+  ggplot(aes(x = mtry, y = mean, 
+             colour = .metric)) +
+  geom_line() +
+  geom_point() +
+  facet_grid(.metric ~ ., scales = "free_y")  +
+  scale_color_manual(values=c("black", "blue", "green", "purple")) +
+  labs(x="Number of Splits")
+
+RF_sens_specmtry <- rf_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("accuracy", "sensitivity", "specificity", "roc_auc")) %>%
+  ggplot(aes(x = trees, y = mean, 
+             colour = .metric)) +
+  geom_line() +
+  geom_point() +
+  facet_grid(.metric ~ ., scales = "free_y")  +
+  scale_color_manual(values=c("black", "blue", "green", "purple")) +
+  labs(x="Number of Trees")
+
+
+
+
+
 RF_sens_spec <- rf_tune_res %>%
   collect_metrics() %>%
   filter(.metric %in% c("sensitivity", "specificity")) %>%
