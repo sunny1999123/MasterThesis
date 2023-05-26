@@ -1226,7 +1226,7 @@ RandomForestPrediction <- function(data, originaldata) {
   return(labels)
 }
 
-
+#Gradient boosting prediction
 GradientBoostingPrediction <- function(data, originaldata) {
   originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
   originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
@@ -1259,7 +1259,7 @@ GradientBoostingPrediction <- function(data, originaldata) {
 }
 
 
-
+#Support Vector Machine prediction
 SupportVectorPrediction <- function(data, originaldata) {
   originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
   originaldata$DiscretionaryAccrualsBinary <- as.factor(originaldata$DiscretionaryAccrualsBinary)
@@ -1303,14 +1303,33 @@ SupportVectorPrediction <- function(data, originaldata) {
 
 
 ui <- fluidPage(
+  tags$head(
+    tags$style(
+      HTML("
+        h1 {
+          font-size: 12px; /* Adjust the font size as needed */
+        }
+        h6 {
+          font-size: 14px; /* Adjust the font size as needed */
+        }
+      ")
+    )
+  ),
   titlePanel("Earnings Management Detection"),
   div(
-    h6(paste("This tool is part of the thesis of Apoorv Sunny Bhatia for the
+    h1(paste("This tool is part of the thesis of Apoorv Sunny Bhatia for the
        MSc in Business Analytics & Management. The thesis can be downloaded
        here:"),a("Thesis", href = "https://github.com/sunny1999123/MasterThesis/blob/main/Thesis.pdf")),
-    #h6(a("Thesis", href = "https://github.com/sunny1999123/MasterThesis/blob/main/Thesis.pdf"))
+  div(h6(paste("The goal of this tool is to enable investors and other financial statement stakeholders to perform their own
+         Earnings Management detection on a firm of their interest. The tool will extract the financial statement information
+         using eXtentible Business Reporting Language (XBRL). Next, it will clean the data and provide three
+         predictions based on three machine learning models. Finally, the tool will provide an overall prediction.
+         Please note that this tool only works for firm that publish their financial statements in the SEC's
+         EDGAR system. The ticker symbol corresponding to a firm of interest can be found on the SEC's company lookup page:")
+               ,a("Click Here", href = "https://www.sec.gov/edgar/searchedgar/companysearch"))),
   ),  
-  disconnectMessage(text = "An error occurred. Please try a different input"),
+  disconnectMessage(text = "An error occurred. The tool was unable to extract (all) the data. 
+                    Please try a different input."),
   sidebarLayout(
     sidebarPanel(
       textInput("ticker", "Please Insert Ticker Symbol Here (e.g. TSLA, MSFT, AAPL):", ""),
@@ -1470,7 +1489,13 @@ server <- function(input, output) {
       
       output$overall_prediction <- renderText({
         if (is.na(company_name)) {
-          prediction <- "Company name not found for the given ticker symbol"
+          prediction <-  paste(
+            "Based on the Machine Learning models, the overall prediction is that the company
+            had a", overall_prediction,
+            "Upwards/Downwards Proxy for Earnings Management.",
+            "This means that the firm likely", ifelse(overall_prediction == "Moderately", "did not engage", "engaged"),
+            "in Earnings Management, based on the Machine Learning models."
+          )
         } else {
           prediction <- paste(
             "Based on the Machine Learning models, the overall prediction is that the company",
