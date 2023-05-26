@@ -27,7 +27,7 @@ library(kernlab)
 library(shinydisconnect)
 library(tidyverse)
 originaldata <- read.csv("EMDetectionTool/Filtered_Results.csv")
-
+originaldata <- read.csv("Filtered_Results.csv")
 
 #Get CIK symbols per ticker and make a dataframe of it from SEC api
 INFO <- read_json("https://www.sec.gov/files/company_tickers.json")
@@ -1312,6 +1312,13 @@ ui <- fluidPage(
         h6 {
           font-size: 14px; /* Adjust the font size as needed */
         }
+        .footer {
+          font-size: 10px; /* Adjust the font size as needed */
+          text-align: center;
+          padding: 10px;
+          background-color: #f5f5f5;
+          border-top: 1px solid #ddd;
+        }
       ")
     )
   ),
@@ -1349,6 +1356,15 @@ ui <- fluidPage(
       textOutput("keepAlive")
       
     )
+  ),
+  div(
+    class = "footer",
+    HTML(paste(
+      "Developed by Apoorv Sunny Bhatia as part of the MSc in Business Analytics & Management thesis.",
+      "<br>",
+      "For any questions/remarks, please reach out to the developer via:",
+      '<a href="mailto:sunny1999@live.nl">sunny1999@live.nl</a>'
+    ))
   )
 )
 
