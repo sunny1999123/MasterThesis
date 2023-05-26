@@ -82,21 +82,35 @@ svm_tune_res <- tune_grid(
 
 
 saveRDS(svm_tune_res, "svm_tune_res.rds")
+svm_tune_res <- readRDS("Tuning/svm_tune_res.rds")
 
 svm_tune_metrics <- svm_tune_res %>%
   collect_metrics()
 Metric_results <- svm_tune_metrics
 
+# svm_sens_spec <- svm_tune_res %>%
+#   collect_metrics() %>%
+#   filter(.metric %in% c("accuracy","sensitivity", "specificity")) %>%
+#   ggplot(aes(x = rbf_sigma, y = mean, 
+#              colour = .metric)) +
+#   geom_line() +
+#   geom_point() +
+#   facet_grid(.metric ~ ., scales = "free_y")  +
+#   scale_color_manual(values=c("black", "blue", "green")) +
+#   labs(x="lambda")
+
+
 svm_sens_spec <- svm_tune_res %>%
   collect_metrics() %>%
-  filter(.metric %in% c("accuracy","sensitivity", "specificity")) %>%
+  filter(.metric %in% c("accuracy","sensitivity", "specificity", "roc_auc")) %>%
   ggplot(aes(x = rbf_sigma, y = mean, 
              colour = .metric)) +
   geom_line() +
   geom_point() +
   facet_grid(.metric ~ ., scales = "free_y")  +
-  scale_color_manual(values=c("black", "blue", "green")) +
+  scale_color_manual(values=c("black", "blue", "green", "purple")) +
   labs(x="lambda")
+
 
 
 ggsave("Figures/SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, dpi = 300)

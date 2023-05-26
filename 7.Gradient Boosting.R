@@ -75,18 +75,25 @@ xgb_tune_res <- tune_grid(
 )
 
 saveRDS(xgb_tune_res, "Tuning/xgb_tune_res.rds")
+xgb_tune_res <- readRDS("Tuning/xgb_tune_res.rds")
 
 xgb_tune_metrics <- xgb_tune_res %>%
   collect_metrics()
 xgb_tune_metrics
 
 
+
+
 xgb_tune_fig <- xgb_tune_res %>% 
   collect_metrics() %>%
-  filter(.metric %in% c("accuracy", "sensitivity", "specificity")) %>%
+  filter(.metric %in% c("accuracy", "sensitivity", "specificity", "roc_auc")) %>%
+  mutate(label = paste("Learn Rate:", learn_rate, "Tree Depth:", tree_depth)) %>%
   ggplot(aes(x = trees, y = mean, colour = .metric)) +
   geom_path() +
-  facet_wrap(learn_rate ~ tree_depth)
+  facet_wrap(~ label) +
+  labs(y = "Metric")+
+  scale_color_manual(values=c("black", "blue", "green", "purple")) 
+  
 
 ggsave("Figures/XGBAccuracySensSpec.pdf", plot = xgb_tune_fig, width = 6, height = 4, dpi = 300)
 
