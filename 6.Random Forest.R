@@ -85,7 +85,7 @@ RF_sens_specmtry <- rf_tune_res %>%
   scale_color_manual(values=c("black", "blue", "green", "purple")) +
   labs(x="Number of Splits")
 
-RF_sens_specmtry <- rf_tune_res %>%
+RF_sens_spectrees <- rf_tune_res %>%
   collect_metrics() %>%
   filter(.metric %in% c("accuracy", "sensitivity", "specificity", "roc_auc")) %>%
   ggplot(aes(x = trees, y = mean, 
