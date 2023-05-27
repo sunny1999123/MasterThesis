@@ -67,6 +67,8 @@ rf_tune_res <- tune_grid(
 
 
 saveRDS(rf_tune_res, "Tuning/rf_tune_res.rds")
+rf_tune_res <- readRDS("Tuning/rf_tune_res.rds")
+
 rf_tune_res %>%
   collect_metrics()
 
@@ -130,6 +132,7 @@ ggsave("Figures/RFAccuracy.pdf", plot = RF_Accuracy, width = 6, height = 4, dpi 
 
 best_acc <- select_best(rf_tune_res, "accuracy")
 best_sens <- select_best(rf_tune_res, "sensitivity")
+best_sens
 best_spec <- select_best(rf_tune_res, "specificity")
 
 
