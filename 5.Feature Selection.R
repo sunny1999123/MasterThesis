@@ -166,15 +166,21 @@ lasso_tune_metrics <- lasso_tune %>%
 
 LassoTuning <- lasso_tune_metrics %>%
   filter(.metric %in% c("accuracy", "sensitivity", "specificity", "roc_auc")) %>%
+  mutate(.metric = case_when(
+    .metric == "accuracy" ~ "Accuracy",
+    .metric == "sensitivity" ~ "Sensitivity",
+    .metric == "specificity" ~ "Specificity",
+    .metric == "roc_auc" ~ "ROC-AUC"
+  )) %>%
   ggplot(aes(x = penalty, y = mean, 
              colour = .metric)) +
   geom_line() +
   geom_point() +
   facet_grid(.metric ~ ., scales = "free_y")  +
   scale_color_manual(values=c("black", "blue", "green", "purple")) +
-  labs(x="Lambda", y="Metric")
+  labs(x="Lambda", y="Metric Value", color ="Metrics:")
 
-ggsave("Figures/LassoTuning.pdf", plot = LassoTuning, width = 6, height = 4, dpi = 300)
+ggsave("Figures/LassoTuning.pdf", plot = LassoTuning, width = 7, height = 4, dpi = 300)
 
 
 
