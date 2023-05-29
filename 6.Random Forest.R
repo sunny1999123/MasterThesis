@@ -69,7 +69,7 @@ rf_tune_res <- tune_grid(
 saveRDS(rf_tune_res, "Tuning/rf_tune_res.rds")
 rf_tune_res <- readRDS("Tuning/rf_tune_res.rds")
 
-rf_tune_res %>%
+RF_metrics <- rf_tune_res %>%
   collect_metrics()
 
 
@@ -85,7 +85,10 @@ RF_sens_specmtry <- rf_tune_res %>%
   geom_point() +
   facet_grid(.metric ~ ., scales = "free_y")  +
   scale_color_manual(values=c("black", "blue", "green", "purple")) +
-  labs(x="Number of Splits")
+  labs(x="Number of Splits", y="Metric")
+
+ggsave("Figures/RFSensSpecMtry.pdf", plot = RF_sens_specmtry, width = 6, height = 4, dpi = 300)
+
 
 RF_sens_spectrees <- rf_tune_res %>%
   collect_metrics() %>%
@@ -96,38 +99,39 @@ RF_sens_spectrees <- rf_tune_res %>%
   geom_point() +
   facet_grid(.metric ~ ., scales = "free_y")  +
   scale_color_manual(values=c("black", "blue", "green", "purple")) +
-  labs(x="Number of Trees")
+  labs(x="Number of Trees", y="Metric")
+
+ggsave("Figures/RFSensSpecTrees.pdf", plot = RF_sens_spectrees, width = 6, height = 4, dpi = 300)
 
 
 
 
-
-RF_sens_spec <- rf_tune_res %>%
-  collect_metrics() %>%
-  filter(.metric %in% c("sensitivity", "specificity")) %>%
-  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
-             colour = .metric)) +
-  geom_errorbar() + 
-  geom_line() +
-  geom_point() +
-  facet_grid(.metric ~ ., scales = "free_y")  +
-  scale_color_manual(values=c("black", "black"))
-
-
-ggsave("Figures/RFSensSpec.pdf", plot = RF_sens_spec, width = 6, height = 4, dpi = 300)
-
-RF_Accuracy <- rf_tune_res %>%
-  collect_metrics() %>%
-  filter(.metric %in% c("roc_auc", "accuracy")) %>%
-  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
-             colour = .metric)) +
-  geom_errorbar() + 
-  geom_line() +
-  geom_point() +
-  facet_grid(.metric ~ ., scales = "free_y") +
-  scale_color_manual(values=c("black", "black"))
-
-ggsave("Figures/RFAccuracy.pdf", plot = RF_Accuracy, width = 6, height = 4, dpi = 300)
+# RF_sens_spec <- rf_tune_res %>%
+#   collect_metrics() %>%
+#   filter(.metric %in% c("sensitivity", "specificity")) %>%
+#   ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
+#              colour = .metric)) +
+#   geom_errorbar() + 
+#   geom_line() +
+#   geom_point() +
+#   facet_grid(.metric ~ ., scales = "free_y")  +
+#   scale_color_manual(values=c("black", "black"))
+# 
+# 
+# ggsave("Figures/RFSensSpec.pdf", plot = RF_sens_spec, width = 6, height = 4, dpi = 300)
+# 
+# RF_Accuracy <- rf_tune_res %>%
+#   collect_metrics() %>%
+#   filter(.metric %in% c("roc_auc", "accuracy")) %>%
+#   ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
+#              colour = .metric)) +
+#   geom_errorbar() + 
+#   geom_line() +
+#   geom_point() +
+#   facet_grid(.metric ~ ., scales = "free_y") +
+#   scale_color_manual(values=c("black", "black"))
+# 
+# ggsave("Figures/RFAccuracy.pdf", plot = RF_Accuracy, width = 6, height = 4, dpi = 300)
 
 
 best_acc <- select_best(rf_tune_res, "accuracy")
