@@ -174,6 +174,10 @@ LassoTuning <- lasso_tune_metrics %>%
   scale_color_manual(values=c("black", "blue", "green", "purple")) +
   labs(x="Lambda", y="Metric")
 
+ggsave("Figures/LassoTuning.pdf", plot = LassoTuning, width = 6, height = 4, dpi = 300)
+
+
+
 best_acc <- select_best(lasso_tune, "accuracy")
 best_acc
 best_sens <- select_best(lasso_tune, "sensitivity")
