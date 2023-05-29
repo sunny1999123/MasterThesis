@@ -186,7 +186,7 @@ best_spec <- select_best(lasso_tune, "specificity")
 best_spec
 
 
-Lasso_final_wf <- finalize_workflow(lasso_wf)
+Lasso_final_wf <- finalize_workflow(lasso_wf, best_acc)
 
 
 
@@ -215,34 +215,34 @@ Features <- Lasso_final_fit %>% extract_fit_parsnip() %>%
 
 
 
-#Select best model based on one standard error rule
-lasso_1se_model <- lasso_tune %>% 
-  select_best(metric = "accuracy", desc(penalty))
-lasso_1se_model
-
-
-#Finalize workflow by selecting the best model
-lasso_wf_tuned <- 
-  lasso_wf %>% 
-  finalize_workflow(lasso_1se_model)
-lasso_wf_tuned
-
-#apply model 
-lasso_last_fit <- lasso_wf_tuned %>% 
-  last_fit(Results_split, metrics = class_metrics)
-
-#Collect metrics of the model
-lasso_test_metrics <- Lasso_final_fit %>% collect_metrics()
-lasso_test_metrics
-
-#Set metrics
-lasso_test_metrics <- lasso_test_metrics %>% 
-  select(-.estimator, -.config) %>% 
-  mutate(model = "lasso")
-
-#Save features of interest 
-Features <- Lasso_final_fit %>% extract_fit_parsnip() %>% 
-  tidy() %>% arrange(desc(abs(estimate)))
+# #Select best model based on one standard error rule
+# lasso_1se_model <- lasso_tune %>% 
+#   select_best(metric = "accuracy", desc(penalty))
+# lasso_1se_model
+# 
+# 
+# #Finalize workflow by selecting the best model
+# lasso_wf_tuned <- 
+#   lasso_wf %>% 
+#   finalize_workflow(lasso_1se_model)
+# lasso_wf_tuned
+# 
+# #apply model 
+# lasso_last_fit <- lasso_wf_tuned %>% 
+#   last_fit(Results_split, metrics = class_metrics)
+# 
+# #Collect metrics of the model
+# lasso_test_metrics <- Lasso_final_fit %>% collect_metrics()
+# lasso_test_metrics
+# 
+# #Set metrics
+# lasso_test_metrics <- lasso_test_metrics %>% 
+#   select(-.estimator, -.config) %>% 
+#   mutate(model = "lasso")
+# 
+# #Save features of interest 
+# Features <- Lasso_final_fit %>% extract_fit_parsnip() %>% 
+#   tidy() %>% arrange(desc(abs(estimate)))
 
 
 
