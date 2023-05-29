@@ -108,7 +108,7 @@ svm_sens_spec <- svm_tune_res %>%
   labs(x = "Cost",y = "Metric Value", color = "Metrics:") +
   scale_color_manual(values=c("black", "blue", "green", "purple")) 
 
-ggsave("Figures/SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 8, height = 4, dpi = 300)
+ggsave("Figures/SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 7, height = 4, dpi = 300)
 
 
 # svm_sens_spec <- svm_tune_res %>%
