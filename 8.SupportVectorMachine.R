@@ -16,7 +16,8 @@ library("knitr")
 library("xgboost")
 library("e1071")
 library(scales)
-
+library(extrafont)
+loadfonts()  
 Results <- as.data.frame(read.csv("Data/Filtered_Results.csv"))
 
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
@@ -99,15 +100,16 @@ svm_sens_spec <- svm_tune_res %>%
     .metric == "specificity" ~ "Specificity",
     .metric == "roc_auc" ~ "ROC-AUC"
   )) %>%
-  mutate(label = paste("\u03BB:", rbf_sigma)) %>%
   filter(rbf_sigma !="0.1")%>%
   ggplot(aes(x = cost, y = mean, 
              colour = .metric)) +
   geom_path() +
-  facet_wrap(~ label) +
-  labs(x = "Cost",y = "Metric Value", color = "Metrics:")+
+  facet_wrap(~ paste(expression(lambda),
+             rbf_sigma)) +
+  labs(x = "Cost",y = "Metric Value", color = "Metrics:") +
   scale_color_manual(values=c("black", "blue", "green", "purple")) 
-ggsave("Figures/SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, dpi = 300)
+
+ggsave("Figures/SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 8, height = 4, dpi = 300)
 
 
 # svm_sens_spec <- svm_tune_res %>%
