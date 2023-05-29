@@ -88,9 +88,9 @@ RF_sens_specmtry <- rf_tune_res %>%
   geom_point() +
   facet_grid(.metric ~ ., scales = "free_y") +
   scale_color_manual(values = c("black", "blue", "green", "purple")) +
-  labs(x = "Number of Splits", y = "Metric")
-
-ggsave("Figures/RFSensSpecMtry.pdf", plot = RF_sens_specmtry, width = 6, height = 4, dpi = 300)
+  labs(x = "Number of Splits",y = "Metric Value", color = "Metrics:") 
+  
+ggsave("Figures/RFSensSpecMtry.pdf", plot = RF_sens_specmtry, width = 7, height = 4, dpi = 300)
 
 
 RF_sens_spectrees <- rf_tune_res %>%
