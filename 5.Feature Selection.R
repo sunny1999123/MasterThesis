@@ -5,13 +5,15 @@ library(tidyr)
 library(ggplot2)
 library(glmnet)
 library(caret)
+library("themis")
+library(recipes)
 library(tidymodels)
 library("glmnet")
 library("kernlab")
 library("skimr")
 library(recipes)
 #Load dataframe
-Results <- as.data.frame(read.csv("Data/PreDimensionalityData"))
+Results <- as.data.frame(read.csv("Data/PreDimensionalityData.csv"))
 
 
 #############
@@ -62,12 +64,9 @@ for (i in 1:length(hist_list)) {
 
 ##############
 
-#---
+############
 ##EM Distribution
-#---
-
-
-
+########
 
 counts <- Results %>% group_by(fy, DiscretionaryAccrualsBinary) %>% summarize(count = n())
 EMPlot <-ggplot(counts, aes(x = DiscretionaryAccrualsBinary, y = count, fill = factor(DiscretionaryAccrualsBinary))) +
@@ -95,9 +94,9 @@ set.seed(1234567)
 
 #Set target variables as factor
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
-
+Results$DiscretionaryAccrualsBinary <- factor(Results$DiscretionaryAccrualsBinary, levels = c("1", "0"))
 #create split, stratafied on target variables
-Results_split <- initial_split(Results, prop = 0.6, strata = DiscretionaryAccrualsBinary)
+Results_split <- initial_split(Results, prop = 0.7, strata = DiscretionaryAccrualsBinary)
 
 #Create the training and test set
 Results_train <- training(Results_split)
@@ -120,7 +119,9 @@ cv_folds
 
 #Set recipe
 glmnet_recipe <-  recipe(DiscretionaryAccrualsBinary ~ ., data = Results_train) %>%
-  update_role(symbol, fy, FY_symbol, new_role = "ignored")
+  update_role(symbol, fy, FY_symbol, new_role = "ignored") %>%
+  step_downsample(DiscretionaryAccrualsBinary)
+
 
 #Set model
 lasso_logreg <- logistic_reg(penalty = tune(), mixture = 1) %>% 
@@ -132,7 +133,8 @@ lasso_wf <- workflow() %>%
   add_model(lasso_logreg)
 
 #Metrics of interest
-class_metrics <- metric_set(accuracy, f_meas, kap, bal_accuracy)
+class_metrics <- metric_set(accuracy, sensitivity, 
+                            specificity, roc_auc)
 class_metrics
 
 #Set grid for cv validation
@@ -144,19 +146,69 @@ lasso_tune <- lasso_wf %>%
             grid = grid_lasso,
             metrics = class_metrics)
 
+saveRDS(lasso_tune, "Tuning/Lasso_tune_res.rds")
+lasso_tune <- readRDS("Tuning/Lasso_tune_res.rds")
 
 #collect metrics 
 lasso_tune_metrics <- lasso_tune %>% 
   collect_metrics()
-LassoAccuracy <- lasso_tune_metrics %>% filter(.metric == "accuracy") %>% 
-  ggplot(aes(x = penalty, y = mean, 
-             ymin = mean - std_err, ymax = mean + std_err)) + 
-  geom_errorbar(alpha = 0.5) + 
-  geom_point() + 
-  scale_x_log10() + 
-  labs(y = "Accuracy", x = expression(lambda))
 
-ggsave("Figures/LassoAccuracy.pdf", plot = LassoAccuracy, width = 6, height = 4, dpi = 300)
+# LassoAccuracy <- lasso_tune_metrics %>% filter(.metric == "sensitivity") %>% 
+#   ggplot(aes(x = penalty, y = mean, 
+#              ymin = mean - std_err, ymax = mean + std_err)) + 
+#   geom_errorbar(alpha = 0.5) + 
+#   geom_point() + 
+#   scale_x_log10() + 
+#   labs(y = "sensitivity", x = expression(lambda))
+
+#ggsave("Figures/LassoAccuracy.pdf", plot = LassoAccuracy, width = 6, height = 4, dpi = 300)
+
+
+LassoTuning <- lasso_tune_metrics %>%
+  filter(.metric %in% c("accuracy", "sensitivity", "specificity", "roc_auc")) %>%
+  ggplot(aes(x = penalty, y = mean, 
+             colour = .metric)) +
+  geom_line() +
+  geom_point() +
+  facet_grid(.metric ~ ., scales = "free_y")  +
+  scale_color_manual(values=c("black", "blue", "green", "purple")) +
+  labs(x="Lambda", y="Metric")
+
+best_acc <- select_best(lasso_tune, "accuracy")
+best_acc
+best_sens <- select_best(lasso_tune, "sensitivity")
+best_sens
+best_spec <- select_best(lasso_tune, "specificity")
+best_spec
+
+
+Lasso_final_wf <- finalize_workflow(lasso_wf)
+
+
+
+set.seed(12345678)
+
+Lasso_final_fit <- Lasso_final_wf %>%
+  last_fit(Results_split, metrics = class_metrics)
+
+Lasso_final_fit %>%
+  collect_metrics()
+
+#Collect metrics of the model
+lasso_test_metrics <- Lasso_final_fit %>% collect_metrics()
+lasso_test_metrics
+
+#Set metrics
+lasso_test_metrics <- lasso_test_metrics %>% 
+  select(-.estimator, -.config) %>% 
+  mutate(model = "lasso")
+
+#Save features of interest 
+Features <- Lasso_final_fit %>% extract_fit_parsnip() %>% 
+  tidy() %>% arrange(desc(abs(estimate)))
+
+
+
 
 
 #Select best model based on one standard error rule
@@ -176,7 +228,7 @@ lasso_last_fit <- lasso_wf_tuned %>%
   last_fit(Results_split, metrics = class_metrics)
 
 #Collect metrics of the model
-lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
+lasso_test_metrics <- Lasso_final_fit %>% collect_metrics()
 lasso_test_metrics
 
 #Set metrics
@@ -185,7 +237,7 @@ lasso_test_metrics <- lasso_test_metrics %>%
   mutate(model = "lasso")
 
 #Save features of interest 
-Features <- lasso_last_fit %>% extract_fit_parsnip() %>% 
+Features <- Lasso_final_fit %>% extract_fit_parsnip() %>% 
   tidy() %>% arrange(desc(abs(estimate)))
 
 
