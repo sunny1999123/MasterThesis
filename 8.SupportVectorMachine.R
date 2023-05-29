@@ -15,7 +15,7 @@ library("themis")
 library("knitr")
 library("xgboost")
 library("e1071")
-
+library(scales)
 
 Results <- as.data.frame(read.csv("Data/Filtered_Results.csv"))
 
@@ -75,7 +75,7 @@ set.seed(123)
 svm_tune_res <- tune_grid(
     svm_wflow, 
     resamples = cv_folds,
-    grid = expand.grid(rbf_sigma = 10^seq(-5, -1, by = 1), cost =  10*seq(1, 10, by = 1)),
+    grid = expand.grid(rbf_sigma = 10^seq(-5, -2, by = 1), cost =  10*seq(1, 10, by = 1)),
     metrics = class_metrics,
     control = control_grid(verbose = TRUE)
   )
@@ -88,32 +88,48 @@ svm_tune_metrics <- svm_tune_res %>%
   collect_metrics()
 Metric_results <- svm_tune_metrics
 
+
+options(scipen = 999)
+svm_sens_spec <- svm_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("accuracy","sensitivity", "specificity", "roc_auc")) %>%
+  mutate(.metric = case_when(
+    .metric == "accuracy" ~ "Accuracy",
+    .metric == "sensitivity" ~ "Sensitivity",
+    .metric == "specificity" ~ "Specificity",
+    .metric == "roc_auc" ~ "ROC-AUC"
+  )) %>%
+  mutate(label = paste("\u03BB:", rbf_sigma)) %>%
+  filter(rbf_sigma !="0.1")%>%
+  ggplot(aes(x = cost, y = mean, 
+             colour = .metric)) +
+  geom_path() +
+  facet_wrap(~ label) +
+  labs(x = "Cost",y = "Metric Value", color = "Metrics:")+
+  scale_color_manual(values=c("black", "blue", "green", "purple")) 
+ggsave("Figures/SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, dpi = 300)
+
+
 # svm_sens_spec <- svm_tune_res %>%
 #   collect_metrics() %>%
-#   filter(.metric %in% c("accuracy","sensitivity", "specificity")) %>%
+#   filter(.metric %in% c("accuracy","sensitivity", "specificity", "roc_auc")) %>%
+#   mutate(.metric = case_when(
+#     .metric == "accuracy" ~ "Accuracy",
+#     .metric == "sensitivity" ~ "Sensitivity",
+#     .metric == "specificity" ~ "Specificity",
+#     .metric == "roc_auc" ~ "ROC-AUC"
+#   )) %>%
 #   ggplot(aes(x = rbf_sigma, y = mean, 
 #              colour = .metric)) +
 #   geom_line() +
 #   geom_point() +
 #   facet_grid(.metric ~ ., scales = "free_y")  +
-#   scale_color_manual(values=c("black", "blue", "green")) +
-#   labs(x="lambda")
+#   labs(x = "Lambda",y = "Metric Value", color = "Metrics:")+
+#   scale_color_manual(values=c("black", "blue", "green", "purple")) 
+# 
 
 
-svm_sens_spec <- svm_tune_res %>%
-  collect_metrics() %>%
-  filter(.metric %in% c("accuracy","sensitivity", "specificity", "roc_auc")) %>%
-  ggplot(aes(x = rbf_sigma, y = mean, 
-             colour = .metric)) +
-  geom_line() +
-  geom_point() +
-  facet_grid(.metric ~ ., scales = "free_y")  +
-  scale_color_manual(values=c("black", "blue", "green", "purple")) +
-  labs(x="lambda")
-
-
-
-ggsave("Figures/SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, dpi = 300)
+#ggsave("Figures/SVMAccuracySensSpec.pdf", plot = svm_sens_spec, width = 6, height = 4, dpi = 300)
 
 
 model <- Metric_results %>%
