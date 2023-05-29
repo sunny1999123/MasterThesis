@@ -104,7 +104,7 @@ svm_sens_spec <- svm_tune_res %>%
   ggplot(aes(x = cost, y = mean, 
              colour = .metric)) +
   geom_path() +
-  facet_wrap(~ paste("λ =", rbf_sigma)) +
+  facet_wrap(~ paste("Lamda =", rbf_sigma)) +
   labs(x = "Cost",y = "Metric Value", color = "Metrics:") +
   scale_color_manual(values=c("black", "blue", "green", "purple")) 
 
