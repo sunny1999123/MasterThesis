@@ -17,7 +17,6 @@ library("xgboost")
 library("e1071")
 library(scales)
 library(extrafont)
-loadfonts()  
 Results <- as.data.frame(read.csv("Data/Filtered_Results.csv"))
 
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
@@ -89,7 +88,6 @@ svm_tune_metrics <- svm_tune_res %>%
   collect_metrics()
 Metric_results <- svm_tune_metrics
 
-Sys.setlocale("LC_CTYPE", "en_US.UTF-8")
 options(scipen = 999)
 svm_sens_spec <- svm_tune_res %>%
   collect_metrics() %>%
@@ -141,7 +139,12 @@ model <- Metric_results %>%
 
 
 
-best_acc <- select(svm_tune_res, "accuracy")
+svm_tune_res1 <- svm_tune_res %>%
+  collect_metrics() %>%
+  filter(rbf_sigma !="0.1") %>%
+  filter(.metric == "sensitivity")
+
+best_acc <- select_best(svm_tune_res, "accuracy")
 best_acc
 best_sens <- select_best(svm_tune_res, "sensitivity")
 best_sens
