@@ -15,7 +15,7 @@ library("themis")
 library("knitr")
 library(progress)
 library(foreach)
-
+library(patchwork)
 
 Results <- as.data.frame(read.csv("Data/Filtered_Results.csv"))
 Results$DiscretionaryAccrualsBinary <- as.factor(Results$DiscretionaryAccrualsBinary)
@@ -74,18 +74,21 @@ RF_metrics <- rf_tune_res %>%
 
 
 
-
-
 RF_sens_specmtry <- rf_tune_res %>%
   collect_metrics() %>%
   filter(.metric %in% c("accuracy", "sensitivity", "specificity", "roc_auc")) %>%
-  ggplot(aes(x = mtry, y = mean, 
-             colour = .metric)) +
+  mutate(.metric = case_when(
+    .metric == "accuracy" ~ "Accuracy",
+    .metric == "sensitivity" ~ "Sensitivity",
+    .metric == "specificity" ~ "Specificity",
+    .metric == "roc_auc" ~ "ROC-AUC"
+  )) %>%
+  ggplot(aes(x = mtry, y = mean, colour = .metric)) +
   geom_line() +
   geom_point() +
-  facet_grid(.metric ~ ., scales = "free_y")  +
-  scale_color_manual(values=c("black", "blue", "green", "purple")) +
-  labs(x="Number of Splits", y="Metric")
+  facet_grid(.metric ~ ., scales = "free_y") +
+  scale_color_manual(values = c("black", "blue", "green", "purple")) +
+  labs(x = "Number of Splits", y = "Metric")
 
 ggsave("Figures/RFSensSpecMtry.pdf", plot = RF_sens_specmtry, width = 6, height = 4, dpi = 300)
 
