@@ -89,7 +89,7 @@ svm_tune_metrics <- svm_tune_res %>%
   collect_metrics()
 Metric_results <- svm_tune_metrics
 
-
+Sys.setlocale("LC_CTYPE", "en_US.UTF-8")
 options(scipen = 999)
 svm_sens_spec <- svm_tune_res %>%
   collect_metrics() %>%
@@ -104,8 +104,7 @@ svm_sens_spec <- svm_tune_res %>%
   ggplot(aes(x = cost, y = mean, 
              colour = .metric)) +
   geom_path() +
-  facet_wrap(~ paste(expression(lambda),
-             rbf_sigma)) +
+  facet_wrap(~ paste("λ =", rbf_sigma)) +
   labs(x = "Cost",y = "Metric Value", color = "Metrics:") +
   scale_color_manual(values=c("black", "blue", "green", "purple")) 
 
