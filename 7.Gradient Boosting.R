@@ -87,15 +87,22 @@ xgb_tune_metrics
 xgb_tune_fig <- xgb_tune_res %>% 
   collect_metrics() %>%
   filter(.metric %in% c("accuracy", "sensitivity", "specificity", "roc_auc")) %>%
-  mutate(label = paste("Learn Rate:", learn_rate, "Tree Depth:", tree_depth)) %>%
+  mutate(.metric = case_when(
+    .metric == "accuracy" ~ "Accuracy",
+    .metric == "sensitivity" ~ "Sensitivity",
+    .metric == "specificity" ~ "Specificity",
+    .metric == "roc_auc" ~ "ROC-AUC"
+  )) %>%
+  mutate(label = paste("Learn Rate:", learn_rate, "\nTree Depth:", tree_depth)) %>%
   ggplot(aes(x = trees, y = mean, colour = .metric)) +
   geom_path() +
   facet_wrap(~ label) +
-  labs(y = "Metric")+
+  labs(x = "Number of Trees",y = "Metric Value", color = "Metrics:")+
   scale_color_manual(values=c("black", "blue", "green", "purple")) 
+
   
 
-ggsave("Figures/XGBAccuracySensSpec.pdf", plot = xgb_tune_fig, width = 6, height = 4, dpi = 300)
+ggsave("Figures/XGBAccuracySensSpec.pdf", plot = xgb_tune_fig, width = 7, height = 4, dpi = 300)
 
 
 xgb_tune_metrics %>% 
