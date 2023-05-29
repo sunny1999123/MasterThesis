@@ -156,13 +156,13 @@ rf_final_fit %>%
 rf_final_fit %>% collect_predictions() %>% 
   conf_mat(truth =DiscretionaryAccrualsBinary, estimate = .pred_class) 
 
-rf_final_fit %>% collect_predictions() %>% 
-  roc_curve(loan_status, .pred_Default) %>% 
-  autoplot()
+# rf_final_fit %>% collect_predictions() %>% 
+#   roc_curve(DiscretionaryAccrualsBinary, .pred_class) %>% 
+#   autoplot()
 
 
 
-rf_model_vi <- rand_forest(mtry = 6, trees = 1000) %>%
+rf_model_vi <- rand_forest(mtry = 7, trees = 200) %>%
   set_mode("classification") %>%
   set_engine("ranger", importance = "permutation")
 rf_vi_wf <- workflow() %>% 
@@ -175,5 +175,5 @@ rf_vi_fit <- rf_vi_wf %>% fit(data = Results_train)
 rf_vi_fit %>% extract_fit_parsnip() %>% vi()
 RFVI <- rf_vi_fit %>% extract_fit_parsnip() %>% vip(geom = "point", num_features = 10)
 
-ggsave("Figures/RFVI.pdf", plot = RFVI, width = 6, height = 4, dpi = 300)
+ggsave("Figures/RFVI.pdf", plot = RFVI, width = 7, height = 4, dpi = 300)
 
