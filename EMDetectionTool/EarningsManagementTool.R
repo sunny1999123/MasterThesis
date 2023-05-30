@@ -25,6 +25,7 @@ library(scales)
 library(robustHD)
 library(kernlab)
 library(shinydisconnect)
+library(shinydashboard)
 library(tidyverse)
 originaldata <- read.csv("Filtered_Results.csv")
 
@@ -1350,7 +1351,8 @@ ui <- fluidPage(
       selectInput("ticker", "Please Select Ticker Symbol :",
                      choices = INFO$ticker
                     ),
-      selectInput("year", "Please Select Year:", choices = as.character(2018:(as.numeric(format(Sys.Date(), "%Y")) - 1))),
+      selectInput("year", "Please Select Year:"
+                  , choices = as.character(2018:(as.numeric(format(Sys.Date(), "%Y")) - 1))),
       actionButton("getData", "OK")
     ),
     mainPanel(
@@ -1441,9 +1443,13 @@ server <- function(input, output) {
           showNotification(message, type = "error")
           cleanedData(NULL)  # Set cleanedData to NULL
         }
-      }, error = function(e) {
-        message <- "An error occurred. The tool was unable to extract (all) the data. Please try a different input."
-        showNotification(message, type = "error")
+      },error = function(e) {
+        message <-  paste("An error occurred. The tool was unable to extract the data for", ticker, "in the year", year, "Please try a different input.")
+        showModal(modalDialog(
+          title = "Error",
+          message,
+          footer = modalButton("Dismiss", "dismiss")
+        ))
         cleanedData(NULL)  # Set cleanedData to NULL
       })
       
@@ -1496,7 +1502,7 @@ server <- function(input, output) {
         })
       }
       if (!is.null(cleanedData())) {
-        # Random Forest prediction
+        # SVM prediction
         predictions_SVM <- SupportVectorPrediction(cleanedData(), originaldata())
         
         output$predictions_SVM <- renderText({
@@ -1535,18 +1541,9 @@ server <- function(input, output) {
         
         HTML(paste("<span style='font-weight: bold;'>", prediction, "</span>"))
       })
-      
     })
   })
 }
-
-
-# "Based on the Machine Learning models, the overall prediction is that",
-# company_name,
-# "in the year", input$year, "had a", overall_prediction,
-# "Upwards/Downwards Proxy for Earnings Management.",
-# "This means that the firm likely", ifelse(overall_prediction == "Moderately", "did not engage", "engaged"),
-# "in Earnings Management, based on the Machine Learning models."
 
 shinyApp(ui, server)
 
