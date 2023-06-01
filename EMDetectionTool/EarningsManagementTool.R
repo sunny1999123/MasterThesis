@@ -14,6 +14,7 @@ library(XBRL)
 library(tidyr)
 library(ggplot2)
 library(ranger)
+library(shinyjs)
 library(xgboost)
 library(recipes)
 library(caret)
@@ -46,12 +47,13 @@ getCIK = function(symbol){
 }
 
 
+
 #Create function that retrieves data
-getData <- function(ticker, year) {
+getData <- function(ticker, year, name, email) {
   CIK <- getCIK(ticker)
   url <- paste0("https://data.sec.gov/api/xbrl/companyfacts/CIK", CIK, ".json")
   pg <- GET(url = url,
-            config = httr::add_headers(`User-Agent` = "Sunny Bhatia 590913ab@student.eur.nl",
+            config = httr::add_headers(`User-Agent` =  paste(name, email),
                                        `Accept-Encoding` = 'gzip, deflate'))
   data_raw <- try(content(pg, as = "text", encoding = "UTF-8") %>% fromJSON(flatten = TRUE), silent = TRUE)
   N <- length(data_raw$facts$dei)
@@ -1302,34 +1304,37 @@ SupportVectorPrediction <- function(data, originaldata) {
 # test2 <- SupportVectorPrediction(Applefeature,originaldata )
 
 
-# A <- getData("A", 2020)
-# CleanA <- cleanData(A)
-# FeatureA <- FeatureCalculation(CleanA, "A", 2020)
-# APrediction <-RandomForestPrediction(FeatureA,originaldata)
-# APredictionBoosting <-GradientBoostingPrediction(FeatureA,originaldata)
-#PredictionSVM <-SupportVectorPrediction(FeatureA,originaldata)
 
 
+#disconnectMessage(text = "An error occurred. The tool was unable to extract (all) the data. 
+#                    Please try a different input."),
 
-ui <- fluidPage(
-  tags$head(
-    tags$style(
-      HTML("
-        h1 {
-          font-size: 12px; /* Adjust the font size as needed */
-        }
-        h6 {
-          font-size: 14px; /* Adjust the font size as needed */
-        }
-        .footer {
-          font-size: 10px; /* Adjust the font size as needed */
-          text-align: center;
-          padding: 10px;
-          background-color: #f5f5f5;
-          border-top: 1px solid #ddd;
-        }
-      ")
-    )
+
+ ui <- fluidPage(
+   useShinyjs(),
+   tags$head(
+     tags$style(
+       HTML("
+         h1 {
+           font-size: 12px; /* Adjust the font size as needed */
+         }
+         h6 {
+           font-size: 14px; /* Adjust the font size as needed */
+         }
+         .footer {
+           font-size: 10px; /* Adjust the font size as needed */
+           text-align: center;
+           padding: 10px;
+           background-color: #f5f5f5;
+           border-top: 1px solid #ddd;
+         }.errorDiv {
+           text-align: center;
+           margin: auto;
+           margin-top: 20px;
+         }
+       "
+            )
+     )
   ),
   titlePanel("Earnings Management Detection"),
   div(
@@ -1340,19 +1345,21 @@ ui <- fluidPage(
          Earnings Management detection tool on a firm of their interest. The tool will extract the financial statement information
          using eXtentible Business Reporting Language (XBRL). Next, it will clean the data and provide three
          predictions based on three machine learning models. Finally, the tool will provide an overall prediction. For more information
-         on the mechanics of the tool, please click on the aforementioned link to download the thesis. Please note that this tool only works for firm that publish their financial statements in the SEC's
+         on the mechanics of the tool, please click on the aforementioned link to access the thesis. Please note that this tool only works for firm that publish their financial statements in the SEC's
          EDGAR system. The ticker symbol corresponding to a firm of interest can be found on the SEC's company lookup page:")
                ,a("Click Here", href = "https://www.sec.gov/edgar/searchedgar/companysearch"))),
-  ),  
-  disconnectMessage(text = "An error occurred. The tool was unable to extract (all) the data. 
-                    Please try a different input."),
+  ),
   sidebarLayout(
     sidebarPanel(
-      selectInput("ticker", "Please Select Ticker Symbol :",
+      textInput("name", "Please insert your Name here:"),
+      textInput("email", "Please insert your email here:"),
+      selectInput("ticker", "Please Select Ticker Symbol:",
                      choices = INFO$ticker
                     ),
       selectInput("year", "Please Select Year:"
                   , choices = as.character(2018:(as.numeric(format(Sys.Date(), "%Y")) - 1))),
+
+
       actionButton("getData", "OK")
     ),
     mainPanel(
@@ -1365,8 +1372,9 @@ ui <- fluidPage(
       textOutput("result_SVM"),
       br(),
       htmlOutput("overall_prediction"),
-      textOutput("keepAlive")
-      
+      textOutput("keepAlive"),
+
+
     )
   ),
   div(
@@ -1378,54 +1386,57 @@ ui <- fluidPage(
       '<a href="mailto:sunny1999@live.nl">sunny1999@live.nl</a>'
     )),
     div(
-      p("Disclaimer: This tool is provided for informational purposes only and should not be considered as financial advice. 
+      p("Disclaimer: This tool is provided for informational purposes only and should not be considered as financial advice.
         The predictions and results generated by the tool are based on machine learning models used in the thesis
         and are not guaranteed to be accurate or reliable. No rights can be derived from the information
         provided by this tool."),
       class = "disclaimer"
     )
-  )
+  ),
+  tags$div(id = "errorDiv", class = "errorDiv", style = "display:none;")
+  
 )
 
 
 
-
-
 server <- function(input, output) {
-  cleanedData <- reactiveVal(NULL)  
-  originaldata <- reactiveVal(NULL)  
-  
+  shinyjs::useShinyjs()
+  cleanedData <- reactiveVal(NULL)
+  originaldata <- reactiveVal(NULL)
+
   observeEvent(input$getData, {
     ticker <- input$ticker
     year <- as.numeric(input$year)
-    
+    name <- input$name
+    email <- input$email
+
     withProgress(message = 'Progress...', value = 0, {
       setProgress(0.3)
       Sys.sleep(2)
-      
+
       tryCatch({
-        data <- getData(ticker, year)
-        data_previous_year <- getData(ticker, year - 1)
-        
+        data <- getData(ticker, year, name, email)
+        data_previous_year <- getData(ticker, year - 1, name, email)
+
         if (!is.null(data) && !is.null(data_previous_year)) {
           message <- "Data is successfully retrieved"
-          
+
           setProgress(0.6)
           cleanedData_year <- cleanData(data)
           cleanedData_previous_year <- cleanData(data_previous_year)
-          
+
           setProgress(0.9)
           cleanedData_combined <- rbind(cleanedData_year, cleanedData_previous_year)
-          
+
           if (anyNA(cleanedData_combined)) {
             message <- "Data is not successfully cleaned. Missing values exist."
-            showNotification(message, type = "error")
+            shiny::showNotification(message, type = "error")
             cleanedData(NULL)  # Set cleanedData to NULL
           } else {
             message <- paste(message, "\nData is successfully cleaned.")
-            
+
             cleanedData_calculated <- FeatureCalculation(cleanedData_combined, input$ticker, year)
-            
+
             if (is.null(cleanedData_calculated)) {
               message <- "Problem with feature calculation."
               showNotification(message, type = "error")
@@ -1433,30 +1444,27 @@ server <- function(input, output) {
             } else {
               cleanedData(cleanedData_calculated)
               message <- paste(message, "\nFeatures are successfully calculated.")
-              
+
               # Set the original data
               originaldata(data)
             }
           }
         } else {
           message <- "Problem with data retrieval."
-          showNotification(message, type = "error")
           cleanedData(NULL)  # Set cleanedData to NULL
         }
-      },error = function(e) {
-        message <-  paste("An error occurred. The tool was unable to extract the data for", ticker, "in the year", year, "Please try a different input.")
-        showModal(modalDialog(
-          title = "Error",
-          message,
-          footer = modalButton("Dismiss", "dismiss")
-        ))
+      },
+      error = function(e) {
+        message <-     paste("An error occurred. The tool was unable to extract the data for" ,     
+                             company_name, "in the year", input$year, "Please try a different input.")
+        shiny::showNotification(message, type = "error")
+        shinyjs::show("errorDiv")
+        shinyjs::html("errorDiv", message)
+        shinyjs::runjs("setTimeout(function() {shinyjs.hide('errorDiv')}, 1000000)")
         cleanedData(NULL)  # Set cleanedData to NULL
       })
       
-      output$message <- renderText({
-        message
-      })
-      
+
       output$cleanedData <- DT::renderDataTable({
         if (!is.null(cleanedData())) {
           transposed_data <- cleanedData() %>%
@@ -1464,8 +1472,8 @@ server <- function(input, output) {
             rename(Year = fy) %>%
             mutate_at(vars(3:ncol(.)), ~sprintf("%.2f", .)) %>%
             rename(Ticker = symbol) %>%
-            tidyr::gather("Name", "Value") 
-          
+            tidyr::gather("Name", "Value")
+
           datatable(
             transposed_data,
             options = list(pageLength = 5),
@@ -1475,14 +1483,14 @@ server <- function(input, output) {
       })
       company_name <- INFO$title[INFO$ticker == input$ticker]
       output$financial_info_text <- renderText({
-        paste("Financial information of", company_name, ":")
+        paste0("Financial information of", " ", company_name,":")
       })
-      
-      
+
+
       if (!is.null(cleanedData())) {
         # Random Forest prediction
         predictions_rf <- RandomForestPrediction(cleanedData(), originaldata())
-        
+
         output$prediction_rf <- renderText({
           predictions_rf
         })
@@ -1493,7 +1501,7 @@ server <- function(input, output) {
       if (!is.null(cleanedData())) {
         # Boosting prediction
         predictions_xgb <- GradientBoostingPrediction(cleanedData(), originaldata())
-        
+
         output$predictions_xgb <- renderText({
           predictions_xgb
         })
@@ -1504,7 +1512,7 @@ server <- function(input, output) {
       if (!is.null(cleanedData())) {
         # SVM prediction
         predictions_SVM <- SupportVectorPrediction(cleanedData(), originaldata())
-        
+
         output$predictions_SVM <- renderText({
           predictions_SVM
         })
@@ -1515,14 +1523,14 @@ server <- function(input, output) {
       moderate_count <- sum(grepl("Moderate", predictions_rf)) +
         sum(grepl("Moderate", predictions_xgb)) +
         sum(grepl("Moderate", predictions_SVM))
-      
+
       extreme_count <- sum(grepl("Extreme", predictions_rf)) +
         sum(grepl("Extreme", predictions_xgb)) +
         sum(grepl("Extreme", predictions_SVM))
-      
-      
+
+
       overall_prediction <- ifelse(moderate_count >= 2, "Moderately", "Extremely")
-      
+
       output$overall_prediction <- renderText({
         if (is.na(company_name)) {
           prediction <-  paste(
@@ -1533,20 +1541,21 @@ server <- function(input, output) {
             "in Earnings Management, based on the Machine Learning models."
           )
         } else {
-          prediction <- paste("Based on the aforementioned predictions, 
-                              the overall predicition for", company_name, "in the year", input$year, 
+          prediction <- paste("Based on the aforementioned predictions,
+                              the overall predicition for", company_name, "in the year", input$year,
                               "is that it", ifelse(overall_prediction == "Moderately", "did not engage", "engaged"),"in Earnings Management"
           )
         }
-        
+
         HTML(paste("<span style='font-weight: bold;'>", prediction, "</span>"))
       })
     })
   })
 }
 
-shinyApp(ui, server)
 
+shinyApp(ui, server)
+#
 
 
 
