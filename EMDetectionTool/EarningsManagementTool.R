@@ -1327,11 +1327,13 @@ SupportVectorPrediction <- function(data, originaldata) {
            padding: 10px;
            background-color: #f5f5f5;
            border-top: 1px solid #ddd;
-         }.errorDiv {
-           text-align: center;
-           margin: auto;
-           margin-top: 20px;
-         }
+         } .errorDiv {
+          text-align: center;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+        }
        "
             )
      )
@@ -1454,6 +1456,8 @@ server <- function(input, output) {
           cleanedData(NULL)  # Set cleanedData to NULL
         }
       },
+      company_name <- INFO$title[INFO$ticker == input$ticker],
+      
       error = function(e) {
         message <-     paste("An error occurred. The tool was unable to extract the data for" ,     
                              company_name, "in the year", input$year, "Please try a different input.")
@@ -1481,7 +1485,6 @@ server <- function(input, output) {
           )
         }
       })
-      company_name <- INFO$title[INFO$ticker == input$ticker]
       output$financial_info_text <- renderText({
         paste0("Financial information of", " ", company_name,":")
       })
