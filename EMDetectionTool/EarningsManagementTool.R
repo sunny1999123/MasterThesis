@@ -1328,11 +1328,14 @@ SupportVectorPrediction <- function(data, originaldata) {
            background-color: #f5f5f5;
            border-top: 1px solid #ddd;
          } .errorDiv {
+          font-size: 20px; /* Adjust the font size as needed */
           text-align: center;
           position: absolute;
           top: 50%;
-          left: 50%;
+          left: 70%;
           transform: translate(-50%, -50%);
+          color: red;
+          font-weight: bold;
         }
        "
             )
@@ -1369,6 +1372,8 @@ SupportVectorPrediction <- function(data, originaldata) {
       verbatimTextOutput("message"),
       textOutput("financial_info_text"),
       DT::dataTableOutput("cleanedData"),
+      textOutput("DataDisclaimer"),
+      br(),
       textOutput("result_rf") ,
       textOutput("result_xgb"),
       textOutput("result_SVM"),
@@ -1488,7 +1493,9 @@ server <- function(input, output) {
       output$financial_info_text <- renderText({
         paste0("Financial information of", " ", company_name,":")
       })
-
+      output$DataDisclaimer <- renderText({
+        "Please note that all ratios/changes are normalized"
+      })
 
       if (!is.null(cleanedData())) {
         # Random Forest prediction
@@ -1558,7 +1565,6 @@ server <- function(input, output) {
 
 
 shinyApp(ui, server)
-#
 
 
 
