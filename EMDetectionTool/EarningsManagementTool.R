@@ -1491,10 +1491,10 @@ server <- function(input, output) {
         }
       })
       output$financial_info_text <- renderText({
-        paste0("Financial information of", " ", company_name,":")
+        paste0("Financial information of", " ", company_name,"*:")
       })
       output$DataDisclaimer <- renderText({
-        "Please note that all ratios/changes are normalized"
+        "*Please note that all ratios/changes are normalized"
       })
 
       if (!is.null(cleanedData())) {
